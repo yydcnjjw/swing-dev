@@ -13,27 +13,26 @@ object MXMLLoader {
     private val xmlSource: Map<String, Any> = mutableMapOf()
     private lateinit var xmlStreamReader: XMLStreamReader
 
-    private var root: Any? = null
     private var current: Element? = null
-        get() {
-            return field ?: throw MXMLLoadException("xml is not loaded!")
-        }
+
+    private var parseFinished = false
 
     private val imports = mutableListOf<Import>()
 
-    fun <T> load(inputStream: InputStream) {
+    fun <T> load(inputStream: InputStream): T {
         xmlStreamReader = XMLInputFactory
             .newInstance()
             .createXMLStreamReader(inputStream)
 
-        while (xmlStreamReader.hasNext()) {
+        while (xmlStreamReader.hasNext() && !parseFinished) {
             when (xmlStreamReader.next()) {
                 XMLStreamConstants.PROCESSING_INSTRUCTION -> processProcessingInstruction()
                 XMLStreamConstants.START_ELEMENT -> processStartElement()
                 XMLStreamConstants.END_ELEMENT -> processEndElement()
-
             }
         }
+
+        return current?.build() as T
     }
 
     private fun processProcessingInstruction() {
@@ -52,25 +51,62 @@ object MXMLLoader {
         imports.add(import)
     }
 
-    private fun getType(name: String): Class<*>? =
-        ClassManager.getType(imports.first { it.className == name })
-
+    private fun getType(name: String): Class<*> =
+        if (name.isNotEmpty() && name[0].isLowerCase()) {
+            // fully-qualified class name
+            ClassManager.load(name)
+        } else {
+            var type = ClassManager.getType(imports.first { it.className == name })
+            if (type == null) {
+                for (import in imports.filter { it.isPackage() }) {
+                    type = ClassManager.load(Import(import.packageName, name))
+                    if (type != null) break
+                }
+            }
+            type
+        } ?: throw MXMLLoadException("is not exist class")
 
     private fun processStartElement() {
-        if (current == null && root != null) {
-            throw MXMLLoadException("multi root!")
-        }
+        // if (current == null && root != null) {
+        //     throw MXMLLoadException("multi root!")
+        // }
 
-        current?.handleStartElement()
+        current = newElement()
+
+        for (i in 0..xmlStreamReader.attributeCount-1) {
+            val prefix = xmlStreamReader.getAttributePrefix(i)
+            val localName = xmlStreamReader.getAttributeLocalName(i)
+            val value = xmlStreamReader.getAttributeValue(i)
+
+            if (prefix.length == 0) {
+                current?.addAttr(localName, value)
+            } else {
+                throw MXMLLoadException("property can not have prefix: $prefix")
+            }
+        }
     }
 
     private fun processEndElement() {
-
+        current?.parent?.add(current!!)
+        val parent = current?.parent
+        if (parent != null) {
+            current = parent
+        } else {
+            parseFinished = true
+        }
     }
 
-    private fun newElement() {
+    private fun newElement(): Element {
         val localName = xmlStreamReader.localName
-        // current = Element.newElement(localName)
+        val i = localName.lastIndexOf('.')
+
+        if (localName[i + 1].isLowerCase()) {
+            // property element process
+            return PropertyElement(localName, current!!)
+        } else {
+             val type = getType(localName)
+            return InstanceElement(current, type)
+        }        
     }
 }
 
@@ -79,40 +115,66 @@ class MXMLLoadException(override val message: String?) :
 
 private data class Attr(
     val name: String,
-    val value: String,
-    val sourceType: Class<*>
-)
+    val value: Any,
+    val sourceType: Class<*>?
+) {
+    
+}
 
-private open class Element(
+private abstract class Element(
     open val parent: Element?
 ) {
 
-    private val propertyAttrs = listOf<Attr>()
+    open lateinit var value: Any
 
-    companion object {
-        fun newElement(name: String, parent: Element?): Element {
-//            val i = name.lastIndexOf('.')
-//
-//            if (name[i + 1].isLowerCase()) {
-//                // property element process
-//                return PropertyElement(parent!!)
-//            } else {
-//
-//            }
-            return Element(null)
+    abstract fun addAttr(name: String, value: Any)
+    
+    abstract fun build(): Any
+
+    abstract fun add(elem: Element)
+}
+
+private class InstanceElement(
+    parent: Element?,
+    private val type: Class<*>
+) : Element(parent) {
+    private val propertyAttrs = mutableListOf<Attr>()
+
+    override fun addAttr(name: String, value: Any) {
+        propertyAttrs.add(Attr(name, value, null))
+    }
+
+    override fun build() : Any {
+        value = type.newInstance()
+        propertyAttrs.forEach { attr ->
+            type.getMethods().first {
+                method ->
+                method.name == "set${attr.name.capitalize()}"
+            }.invoke(value, attr.value)
         }
+        return value
     }
 
-
-    fun handleStartElement() {
-
+    override fun add(elem: Element) {
+        val property = elem as PropertyElement
+        addAttr(property.name, property.build())
     }
-
 }
 
 private class PropertyElement(
+    val name: String,
     override val parent: Element
 ) : Element(parent) {
 
+    override fun addAttr(name: String, value: Any) {
+        // nop
+    }
 
+    override fun build(): Any {
+        return value
+    } 
+
+    override fun add(elem: Element) {
+        value = elem.build()
+    }
 }

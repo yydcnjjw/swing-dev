@@ -3,8 +3,8 @@ package org.yydcnjjw.swing.mxml
 class Import(
     import: String
 ) {
-    val className: String
     val packageName: String
+    val className: String
 
     init {
         if (import.endsWith(".*")) {
@@ -27,6 +27,9 @@ class Import(
         }
     }
 
+    constructor(packageName: String, className: String) :
+            this("$packageName.$className")
+
     fun isPackage(): Boolean {
         return className == ".*"
     }
@@ -36,20 +39,22 @@ class Import(
 }
 
 object ClassManager {
-    private val packages: MutableList<Import> = mutableListOf()
     private val classes: MutableMap<Import, Class<*>> = mutableMapOf()
 
     fun load(name: String): Class<*>? = load(Import(name))
 
     fun load(import: Import): Class<*>? {
         if (import.isPackage()) {
-            packages.add(import)
             return null
         }
 
-        val type = javaClass
-            .classLoader
-            .loadClass(import.getClassLoadPath())
+        val type = try {
+            javaClass
+                .classLoader
+                .loadClass(import.getClassLoadPath())
+        } catch (e: ClassNotFoundException) {
+            return null
+        }
 
         classes[import] = type
 
