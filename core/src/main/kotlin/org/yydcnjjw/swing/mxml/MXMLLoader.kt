@@ -10,7 +10,7 @@ object MXMLLoader {
 
     private const val IMPORT_PROCESSING_INSTRUCTION = "import"
 
-    private val xmlSource: Map<String, Any> = mutableMapOf()
+    // private val xmlSource: Map<String, Any> = mutableMapOf()
     private lateinit var xmlStreamReader: XMLStreamReader
 
     private var current: Element? = null
@@ -19,7 +19,7 @@ object MXMLLoader {
 
     private val imports = mutableListOf<Import>()
 
-    fun <T> load(inputStream: InputStream): T {
+    fun <T> load(inputStream: InputStream): T? {
         xmlStreamReader = XMLInputFactory
             .newInstance()
             .createXMLStreamReader(inputStream)
@@ -32,7 +32,8 @@ object MXMLLoader {
             }
         }
 
-        return current?.build() as T
+        @Suppress("UNCHECKED_CAST")
+        return current?.build() as T?
     }
 
     private fun processProcessingInstruction() {
@@ -73,12 +74,12 @@ object MXMLLoader {
 
         current = newElement()
 
-        for (i in 0..xmlStreamReader.attributeCount-1) {
+        for (i in 0 until xmlStreamReader.attributeCount) {
             val prefix = xmlStreamReader.getAttributePrefix(i)
             val localName = xmlStreamReader.getAttributeLocalName(i)
             val value = xmlStreamReader.getAttributeValue(i)
 
-            if (prefix.length == 0) {
+            if (prefix.isEmpty()) {
                 current?.addAttr(localName, value)
             } else {
                 throw MXMLLoadException("property can not have prefix: $prefix")
@@ -100,25 +101,29 @@ object MXMLLoader {
         val localName = xmlStreamReader.localName
         val i = localName.lastIndexOf('.')
 
-        if (localName[i + 1].isLowerCase()) {
+        return if (localName[i + 1].isLowerCase()) {
             // property element process
-            return PropertyElement(localName, current!!)
+            PropertyElement(localName, current!!)
         } else {
-             val type = getType(localName)
-            return InstanceElement(current, type)
-        }        
+            val type = getType(localName)
+            InstanceElement(current, type)
+        }
     }
 }
 
 class MXMLLoadException(override val message: String?) :
     Exception()
 
-private data class Attr(
+private class Attr(
     val name: String,
-    val value: Any,
+    value: Any,
     val sourceType: Class<*>?
 ) {
-    
+    val value: Any = if (value is String) {
+        value.toIntOrNull() ?: value
+    } else {
+        value
+    }
 }
 
 private abstract class Element(
@@ -128,7 +133,7 @@ private abstract class Element(
     open lateinit var value: Any
 
     abstract fun addAttr(name: String, value: Any)
-    
+
     abstract fun build(): Any
 
     abstract fun add(elem: Element)
@@ -144,13 +149,32 @@ private class InstanceElement(
         propertyAttrs.add(Attr(name, value, null))
     }
 
-    override fun build() : Any {
-        value = type.newInstance()
+    override fun build(): Any {
+        value = type.getDeclaredConstructor().newInstance()
+
         propertyAttrs.forEach { attr ->
-            type.getMethods().first {
-                method ->
+            val params = if (
+                attr.value is String &&
+                Regex("#\\(.*\\)").matches(attr.value)
+            ) {
+                (Regex("#\\((.*)\\)")
+                    .find(attr.value)
+                    ?.groupValues
+                    ?.firstOrNull { it != attr.value } ?: throw MXMLLoadException("no param"))
+                    .split(',')
+                    .map {
+                        it.toIntOrNull() ?: it
+                    }
+            } else {
+                listOf(attr.value)
+            }
+
+            val method = type.methods.firstOrNull { method ->
                 method.name == "set${attr.name.capitalize()}"
-            }.invoke(value, attr.value)
+                        && method.parameterCount == params.size
+            } ?: throw MXMLLoadException("don't match property")
+
+            method.invoke(value, *params.toTypedArray())
         }
         return value
     }
@@ -172,7 +196,7 @@ private class PropertyElement(
 
     override fun build(): Any {
         return value
-    } 
+    }
 
     override fun add(elem: Element) {
         value = elem.build()
