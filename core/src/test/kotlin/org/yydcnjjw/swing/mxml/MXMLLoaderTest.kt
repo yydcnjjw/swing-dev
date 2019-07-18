@@ -1,24 +1,20 @@
 package org.yydcnjjw.swing.mxml
 
-import java.awt.Dimension
-import java.lang.Exception
+import javax.swing.JFrame
+import javax.swing.JRootPane
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import javax.swing.JLabel
-class MXMLLoaderTest {
-   @Test
-   fun loadTest() {
-       val obj: Any? = MXMLLoader.load(javaClass.getResourceAsStream("test.xml")!!)
-       println(obj)
-       val label = JLabel()
-       label.setSize(Dimension())
-       assertNotNull(obj)
-    }
 
+class MXMLLoaderTest {
 
     @Test
-    fun regexTest() {
-        println(Regex("#\\((.*)\\)")
-            .find("#(1,2,3)"))
+    fun loadTest() {
+        val frame: JFrame? = MXMLLoader.load(javaClass.getResourceAsStream("test.xml")!!)
+        assertNotNull(frame)
+        println(frame.contentPane)
+        frame.contentPane.components.forEach(::println)
+        assertEquals(frame.rootPane.windowDecorationStyle, JRootPane.NONE)
     }
+
 }

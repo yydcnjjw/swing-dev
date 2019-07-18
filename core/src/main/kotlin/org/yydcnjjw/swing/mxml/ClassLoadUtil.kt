@@ -9,7 +9,7 @@ class Import(
     init {
         if (import.endsWith(".*")) {
             packageName = import.substring(0, import.length - 2)
-            className = ".*"
+            className = "*"
         } else {
             var i = import.indexOf('.')
             val len = import.length
@@ -31,11 +31,15 @@ class Import(
             this("$packageName.$className")
 
     fun isPackage(): Boolean {
-        return className == ".*"
+        return className == "*"
     }
 
     fun getClassLoadPath() = "$packageName.${className.replace('.', '$')}"
 
+
+    override fun toString(): String {
+        return "$packageName.$className"
+    }
 }
 
 object ClassManager {

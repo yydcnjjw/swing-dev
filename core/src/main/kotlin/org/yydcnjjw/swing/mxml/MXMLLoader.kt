@@ -1,10 +1,13 @@
 package org.yydcnjjw.swing.mxml
 
+import org.yydcnjjw.swing.BeanUtil
 import java.io.InputStream
 import java.lang.Exception
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 import javax.xml.stream.XMLStreamReader
+
+import java.awt.Container
 
 object MXMLLoader {
 
@@ -18,6 +21,10 @@ object MXMLLoader {
     private var parseFinished = false
 
     private val imports = mutableListOf<Import>()
+
+    init {
+
+    }
 
     fun <T> load(inputStream: InputStream): T? {
         xmlStreamReader = XMLInputFactory
@@ -57,7 +64,11 @@ object MXMLLoader {
             // fully-qualified class name
             ClassManager.load(name)
         } else {
-            var type = ClassManager.getType(imports.first { it.className == name })
+            val packageImport = imports.firstOrNull {it.className == name}
+            var type: Class<*>? = if (packageImport != null) {
+                ClassManager.getType(packageImport)
+            } else null
+
             if (type == null) {
                 for (import in imports.filter { it.isPackage() }) {
                     type = ClassManager.load(Import(import.packageName, name))
@@ -65,13 +76,9 @@ object MXMLLoader {
                 }
             }
             type
-        } ?: throw MXMLLoadException("is not exist class")
+        } ?: throw MXMLLoadException("not exist class")
 
     private fun processStartElement() {
-        // if (current == null && root != null) {
-        //     throw MXMLLoadException("multi root!")
-        // }
-
         current = newElement()
 
         for (i in 0 until xmlStreamReader.attributeCount) {
@@ -115,26 +122,38 @@ class MXMLLoadException(override val message: String?) :
     Exception()
 
 private class Attr(
-    val name: String,
+    val name: String?,
     value: Any,
     val sourceType: Class<*>?
 ) {
-    val value: Any = if (value is String) {
-        value.toIntOrNull() ?: value
-    } else {
-        value
-    }
+    // TODO: class new instance
+    val values: List<Any> =
+        if (value is String && Regex("#\\(.*\\)").matches(value)) {
+            // multi params
+            // format #(p1,p2,p3,...)
+            // param support number, string
+            (Regex("#\\((.*)\\)")
+                .find(value)
+                ?.groupValues
+                ?.firstOrNull { it != value } ?: throw MXMLLoadException("no param"))
+                .split(',')
+        } else {
+            listOf(value)
+        }
+
 }
 
 private abstract class Element(
     open val parent: Element?
 ) {
 
-    open lateinit var value: Any
+    open var value: Any? = null
 
     abstract fun addAttr(name: String, value: Any)
 
-    abstract fun build(): Any
+    abstract fun addInstanceAttr(sourceType: Class<*>, value: Any)
+
+    abstract fun build(): Any?
 
     abstract fun add(elem: Element)
 }
@@ -143,45 +162,56 @@ private class InstanceElement(
     parent: Element?,
     private val type: Class<*>
 ) : Element(parent) {
+
+    companion object {
+        // TODO: scan annotation
+
+    }
+
     private val propertyAttrs = mutableListOf<Attr>()
+    private val instanceAttrs = mutableListOf<Attr>()
 
     override fun addAttr(name: String, value: Any) {
         propertyAttrs.add(Attr(name, value, null))
     }
 
-    override fun build(): Any {
-        value = type.getDeclaredConstructor().newInstance()
+    override fun addInstanceAttr(sourceType: Class<*>, value: Any) {
+        instanceAttrs.add(Attr(null, value, sourceType))
+    }
 
-        propertyAttrs.forEach { attr ->
-            val params = if (
-                attr.value is String &&
-                Regex("#\\(.*\\)").matches(attr.value)
-            ) {
-                (Regex("#\\((.*)\\)")
-                    .find(attr.value)
-                    ?.groupValues
-                    ?.firstOrNull { it != attr.value } ?: throw MXMLLoadException("no param"))
-                    .split(',')
-                    .map {
-                        it.toIntOrNull() ?: it
-                    }
-            } else {
-                listOf(attr.value)
+    override fun build(): Any? {
+        if (value == null) {
+            value = type.getDeclaredConstructor().newInstance() ?: throw MXMLLoadException("instance failure")
+
+            propertyAttrs.forEach { attr ->
+                BeanUtil.invokeSetMethod(
+                    value!!,
+                    type,
+                    attr.name!!,
+                    attr.values)
             }
 
-            val method = type.methods.firstOrNull { method ->
-                method.name == "set${attr.name.capitalize()}"
-                        && method.parameterCount == params.size
-            } ?: throw MXMLLoadException("don't match property")
+            instanceAttrs.forEach { attr ->
+                BeanUtil.invoke(value!!, type, "add", attr.values)
 
-            method.invoke(value, *params.toTypedArray())
+            }
         }
         return value
     }
 
     override fun add(elem: Element) {
-        val property = elem as PropertyElement
-        addAttr(property.name, property.build())
+        val attrValue = elem.build()
+        if (elem is PropertyElement) {
+            if (attrValue != null) {
+                addAttr(elem.name, attrValue)
+            } else {
+                // log warn null property
+            }
+        } else if (elem is InstanceElement) {
+            if (attrValue != null) {
+                addInstanceAttr(attrValue::class.java, attrValue)
+            }
+        }
     }
 }
 
@@ -194,11 +224,20 @@ private class PropertyElement(
         // nop
     }
 
-    override fun build(): Any {
+    override fun addInstanceAttr(sourceType: Class<*>, value: Any) {
+        // nop
+    }
+
+
+    override fun build(): Any? {
         return value
     }
 
     override fun add(elem: Element) {
         value = elem.build()
     }
+}
+
+interface ElementHandler {
+    fun subElementHandler()
 }
