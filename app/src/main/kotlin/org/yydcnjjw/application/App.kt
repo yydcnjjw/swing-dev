@@ -20,9 +20,10 @@ class App : JFrame() {
 
     init {
         setSize(600, 400)
-        contentPane
+
         // hide title bar
         isUndecorated = true
+
         rootPane.windowDecorationStyle = JRootPane.NONE
 
         // mouse dragged

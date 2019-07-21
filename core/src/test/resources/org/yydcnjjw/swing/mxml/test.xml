@@ -1,18 +1,20 @@
 <?import javax.swing.JFrame?>
 
-<?import java.awt.FlowLayout?>
 <?import javax.swing.*?>
 <?import java.awt.Dimension?>
 
-<JFrame>
+<JFrame
+        size="#(600,400)"
+        undecorated="true">
     <layout>
+        <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>
+    </layout>
+<!--     <layout>
     </layout>
     <jMenuBar>
-    </jMenuBar>
+    </jMenuBar> -->
     <rootPane
-            windowDecorationStyle="JRootPane.NONE">
-
-    </rootPane>
+            windowDecorationStyle="0"/>
     <contentPane>
         <JPanel>
             <JLabel

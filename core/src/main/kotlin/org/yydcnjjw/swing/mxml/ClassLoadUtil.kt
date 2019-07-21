@@ -1,5 +1,15 @@
 package org.yydcnjjw.swing.mxml
 
+import org.reflections.Reflections
+import org.reflections.scanners.MethodAnnotationsScanner
+import org.reflections.scanners.SubTypesScanner
+import java.lang.reflect.Method
+import java.net.JarURLConnection
+import java.util.*
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.jvm.reflect
+
 class Import(
     import: String
 ) {
@@ -44,7 +54,10 @@ class Import(
 
 object ClassManager {
     private val classes: MutableMap<Import, Class<*>> = mutableMapOf()
-
+    private val reflection = Reflections(
+        "org.yydcnjjw",
+        MethodAnnotationsScanner()
+    )
     fun load(name: String): Class<*>? = load(Import(name))
 
     fun load(import: Import): Class<*>? {
@@ -66,4 +79,8 @@ object ClassManager {
     }
 
     fun getType(import: Import): Class<*>? = classes[import]
+
+    fun getMethodsAnnotatedWith(classType: Class<out Annotation>): Set<Method> {
+        return reflection.getMethodsAnnotatedWith(classType)
+    }
 }

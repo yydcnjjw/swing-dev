@@ -1,13 +1,15 @@
 package org.yydcnjjw.swing.mxml
 
 import org.yydcnjjw.swing.BeanUtil
+import java.awt.Container
 import java.io.InputStream
-import java.lang.Exception
+import java.lang.ClassCastException
+import java.lang.reflect.Method
+import javax.swing.BoxLayout
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 import javax.xml.stream.XMLStreamReader
-
-import java.awt.Container
+import kotlin.reflect.KClass
 
 object MXMLLoader {
 
@@ -21,10 +23,6 @@ object MXMLLoader {
     private var parseFinished = false
 
     private val imports = mutableListOf<Import>()
-
-    init {
-
-    }
 
     fun <T> load(inputStream: InputStream): T? {
         xmlStreamReader = XMLInputFactory
@@ -40,7 +38,7 @@ object MXMLLoader {
         }
 
         @Suppress("UNCHECKED_CAST")
-        return current?.build() as T?
+        return current?.value as T?
     }
 
     private fun processProcessingInstruction() {
@@ -64,7 +62,7 @@ object MXMLLoader {
             // fully-qualified class name
             ClassManager.load(name)
         } else {
-            val packageImport = imports.firstOrNull {it.className == name}
+            val packageImport = imports.firstOrNull { it.className == name }
             var type: Class<*>? = if (packageImport != null) {
                 ClassManager.getType(packageImport)
             } else null
@@ -87,7 +85,7 @@ object MXMLLoader {
             val value = xmlStreamReader.getAttributeValue(i)
 
             if (prefix.isEmpty()) {
-                current?.addAttr(localName, value)
+                current?.setPropertyAttr(Attr(localName, value))
             } else {
                 throw MXMLLoadException("property can not have prefix: $prefix")
             }
@@ -95,7 +93,7 @@ object MXMLLoader {
     }
 
     private fun processEndElement() {
-        current?.parent?.add(current!!)
+        current?.appendToParentElement()
         val parent = current?.parent
         if (parent != null) {
             current = parent
@@ -107,13 +105,11 @@ object MXMLLoader {
     private fun newElement(): Element {
         val localName = xmlStreamReader.localName
         val i = localName.lastIndexOf('.')
-
+        println(localName)
         return if (localName[i + 1].isLowerCase()) {
-            // property element process
-            PropertyElement(localName, current!!)
+            PropertyElement(localName, current ?: throw MXMLLoadException("property must have a parent"))
         } else {
-            val type = getType(localName)
-            InstanceElement(current, type)
+            InstanceElement(current, getType(localName))
         }
     }
 }
@@ -121,10 +117,9 @@ object MXMLLoader {
 class MXMLLoadException(override val message: String?) :
     Exception()
 
-private class Attr(
-    val name: String?,
-    value: Any,
-    val sourceType: Class<*>?
+class Attr(
+    val name: String,
+    value: Any
 ) {
     // TODO: class new instance
     val values: List<Any> =
@@ -140,104 +135,172 @@ private class Attr(
         } else {
             listOf(value)
         }
-
 }
 
-private abstract class Element(
+abstract class Element(
     open val parent: Element?
 ) {
-
-    open var value: Any? = null
-
-    abstract fun addAttr(name: String, value: Any)
-
-    abstract fun addInstanceAttr(sourceType: Class<*>, value: Any)
-
-    abstract fun build(): Any?
-
-    abstract fun add(elem: Element)
+    abstract val value: Any?
+    abstract fun setPropertyAttr(attr: Attr, isElem: Boolean = false)
+    abstract fun appendToParentElement()
+    open fun build(): Any {
+        return value!!
+    }
 }
 
-private class InstanceElement(
+abstract class ClassElement(
     parent: Element?,
-    private val type: Class<*>
+    val classType: Class<*>
 ) : Element(parent) {
+
+    override fun setPropertyAttr(attr: Attr, isElem: Boolean) {
+        if (BeanUtil.getSetterMethod(classType, attr.name).isNotEmpty()) {
+            BeanUtil.invokeSetMethod(this.value!!, classType, attr.name, attr.values)
+        }
+    }
+
+    fun getHandler(handlerClassType: Class<out Annotation>) =
+        ClassManager.getMethodsAnnotatedWith(handlerClassType)
+
+    fun getSubElemHandler(classType: Class<*>): Method? {
+        return getHandler(SubElemHandler::class.java)
+            .firstOrNull { method ->
+                val subElemHandlerAnnotation = method.getAnnotation(SubElemHandler::class.java)
+                ((subElemHandlerAnnotation.extend
+                        && subElemHandlerAnnotation.classType.java.isAssignableFrom(classType))
+                        || classType == subElemHandlerAnnotation.classType)
+
+            }
+    }
+
+    fun getConstructorHandler(classType: Class<*>): Method? {
+        return getHandler(ConstructorHandler::class.java)
+            .firstOrNull { method ->
+                method.getAnnotation(ConstructorHandler::class.java).classType.java == classType
+            }
+    }
+}
+
+open class InstanceElement(
+    parent: Element?,
+    classType: Class<*>
+) : ClassElement(parent, classType) {
 
     companion object {
-        // TODO: scan annotation
-
+        private const val CONSTRUCTOR_ARG = "constructor-arg"
+        private const val CONSTRUCTOR = "constructor"
     }
+
+    // TODO support constructor function with params
+    // NOTE: sub elem
+    // constructor-arg must in front of the property elem
+    override var value: Any? = null
 
     private val propertyAttrs = mutableListOf<Attr>()
-    private val instanceAttrs = mutableListOf<Attr>()
+    private val constructorArgsAttrs = mutableListOf<Attr>()
 
-    override fun addAttr(name: String, value: Any) {
-        propertyAttrs.add(Attr(name, value, null))
-    }
-
-    override fun addInstanceAttr(sourceType: Class<*>, value: Any) {
-        instanceAttrs.add(Attr(null, value, sourceType))
-    }
-
-    override fun build(): Any? {
+    override fun build(): Any {
         if (value == null) {
-            value = type.getDeclaredConstructor().newInstance() ?: throw MXMLLoadException("instance failure")
+            val handler = getConstructorHandler(classType)
+            val args = constructorArgsAttrs.flatMap { it.values }
 
-            propertyAttrs.forEach { attr ->
-                BeanUtil.invokeSetMethod(
-                    value!!,
-                    type,
-                    attr.name!!,
-                    attr.values)
+            value = if (handler != null) {
+                handler(this, this, args)
+            } else {
+                BeanUtil.build(classType, args)
             }
 
-            instanceAttrs.forEach { attr ->
-                BeanUtil.invoke(value!!, type, "add", attr.values)
-
+            propertyAttrs.forEach {
+                BeanUtil.invokeSetMethod(value!!, classType, it.name, it.values)
             }
         }
-        return value
+        return value!!
     }
 
-    override fun add(elem: Element) {
-        val attrValue = elem.build()
-        if (elem is PropertyElement) {
-            if (attrValue != null) {
-                addAttr(elem.name, attrValue)
+    override fun setPropertyAttr(attr: Attr, isElem: Boolean) {
+        if (attr.name == CONSTRUCTOR_ARG) {
+            constructorArgsAttrs.add(attr)
+        } else {
+            if (!isElem) {
+                propertyAttrs.add(attr)
             } else {
-                // log warn null property
+                BeanUtil.invokeSetMethod(value ?: build(), classType, attr.name, attr.values)
             }
-        } else if (elem is InstanceElement) {
-            if (attrValue != null) {
-                addInstanceAttr(attrValue::class.java, attrValue)
+
+        }
+    }
+
+    override fun appendToParentElement() {
+        if (parent == null) {
+            return
+        }
+
+        when (parent) {
+            is InstanceElement -> {
+                val classType = (parent as InstanceElement).classType
+                getSubElemHandler(classType)?.invoke(this, parent, this)
             }
+            is PropertyElement -> {
+                // TODO support multi sub instance elem
+                (parent as PropertyElement).value = value ?: build()
+            }
+            else -> throw MXMLLoadException("Not support Elem class")
         }
     }
 }
 
-private class PropertyElement(
+class PropertyElement(
     val name: String,
     override val parent: Element
-) : Element(parent) {
-
-    override fun addAttr(name: String, value: Any) {
-        // nop
+) : ClassElement(
+    parent,
+    if (parent is ClassElement) {
+        BeanUtil.getFieldType(parent.classType, name)
+    } else {
+        throw MXMLLoadException("Not support Elem class")
     }
+) {
+    override var value: Any = BeanUtil.invokeGetMethod(
+        parent.value ?: parent.build(),
+        (parent as ClassElement).classType, name
+    ) ?: throw MXMLLoadException("null property")
 
-    override fun addInstanceAttr(sourceType: Class<*>, value: Any) {
-        // nop
-    }
-
-
-    override fun build(): Any? {
-        return value
-    }
-
-    override fun add(elem: Element) {
-        value = elem.build()
+    override fun appendToParentElement() {
+        parent.setPropertyAttr(Attr(name, value), true)
     }
 }
 
-interface ElementHandler {
-    fun subElementHandler()
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.FUNCTION)
+annotation class SubElemHandler(
+    val classType: KClass<*>,
+    val extend: Boolean = false
+)
+
+@SubElemHandler(Container::class, true)
+fun ContainerSubElemHandler(parent: Element, subElem: Element) {
+    BeanUtil.invoke(parent.value ?: parent.build(),
+        Container::class.java, "add",
+        listOf(subElem.value ?: subElem.build()))
+}
+
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.FUNCTION)
+annotation class ConstructorHandler(
+    val classType: KClass<*>
+)
+
+@ConstructorHandler(BoxLayout::class)
+fun BoxLayoutConstructorHandler(
+    elem: ClassElement, args: List<Any>
+): Any {
+    return BeanUtil.build(BoxLayout::class.java, mutableListOf<Any>().also {
+        val target = elem.parent?.parent?.value!!
+        if (target is Container) {
+            it.add(target)
+            it.addAll(args)
+        } else {
+            throw MXMLLoadException("box layout target must is a container, please set parent elem")
+        }
+    })
 }
