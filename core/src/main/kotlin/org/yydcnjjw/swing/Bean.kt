@@ -1,5 +1,6 @@
 package org.yydcnjjw.swing
 
+import org.yydcnjjw.swing.mxml.ClassManager
 import java.lang.reflect.Method
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -103,20 +104,22 @@ object BeanUtil {
                     }
             }
 
-    private fun coerce(value: Any, classType: Class<*>): Any {
+    fun coerce(value: Any, classType: Class<*>): Any {
         return if (classType.isAssignableFrom(value::class.java)) value
         else {
+            val stringValue = value.toString()
+
             when (classType) {
-                Boolean::class.java -> value.toString().toBoolean()
-                Char::class.java -> value.toString().toCharArray()[0]
-                Byte::class.java -> value.toString().toByte()
-                Short::class.java -> value.toString().toShort()
-                Int::class.java -> value.toString().toInt()
-                Long::class.java -> value.toString().toLong()
-                BigInteger::class.java -> value.toString().toBigInteger()
-                Float::class.java -> value.toString().toFloat()
-                Double::class.java -> value.toString().toDouble()
-                BigDecimal::class.java -> value.toString().toBigDecimal()
+                Boolean::class.java -> stringValue.toBoolean()
+                Char::class.java -> stringValue.toCharArray()[0]
+                Byte::class.java -> stringValue.toByte()
+                Short::class.java -> stringValue.toShort()
+                Int::class.java -> stringValue.toInt()
+                Long::class.java -> stringValue.toLong()
+                BigInteger::class.java -> stringValue.toBigInteger()
+                Float::class.java -> stringValue.toFloat()
+                Double::class.java -> stringValue.toDouble()
+                BigDecimal::class.java -> stringValue.toBigDecimal()
                 else -> {
                     var valueClassType: Class<*>? = value::class.java
                     val valueOfMethods = mutableListOf<Method>()
@@ -143,7 +146,6 @@ object BeanUtil {
 
                 }
             }
-
         }
     }
 

@@ -1,0 +1,10 @@
+<?import javax.swing.JFrame?>
+<?import javax.swing.*?>
+<?import java.awt.Dimension?>
+
+<JPanel>
+    <JLabel
+            text="Hello World!"
+            size="#(100,100)">
+    </JLabel>
+</JPanel>

@@ -13,13 +13,16 @@ class App : JFrame() {
         val BACKGROUND_COLOR = Color(235, 235, 235)
         val BTN_COLOR = Color(238, 126, 33)
         val BTN2_COLOR = Color(0, 141, 171)
+
+        const val WIDTH = 1024
+        const val HEIGHT = 720
     }
 
     var mouseAtX = 0
     var mouseAtY = 0
 
     init {
-        setSize(600, 400)
+        setSize(WIDTH, HEIGHT)
 
         // hide title bar
         isUndecorated = true
@@ -45,54 +48,57 @@ class App : JFrame() {
         layout = BoxLayout(contentPane, BoxLayout.Y_AXIS)
         val titlePanel = JPanel()
         titlePanel.layout = BoxLayout(titlePanel, BoxLayout.X_AXIS)
-        titlePanel.add(with(JLabel("计算条件设定")) {
-            this
-        })
+        titlePanel.add(JLabel("计算条件设定"))
         titlePanel.add(Box.createHorizontalGlue())
-        titlePanel.add(with(JButton("X")) {
-            this
-        })
+        titlePanel.add(JButton("X"))
         add(titlePanel)
 
-        add(with(JPanel()) {
-            val size = Dimension(600, 10)
-            this.preferredSize = size
-            this.maximumSize = size
-            this.background = BTN_COLOR
-            this
+        add(JPanel().also {
+            val size = Dimension(WIDTH, 10)
+            it.preferredSize = size
+            it.maximumSize = size
+            it.background = BTN_COLOR
         })
 
-        add(with(Box.createHorizontalBox()) {
-            this.add(JLabel("契约情报"))
-            this.add(Box.createHorizontalGlue())
-            this
+        add(Box.createHorizontalBox().also {
+            it.add(JLabel("契约情报"))
+            it.add(Box.createHorizontalGlue())
         })
 
-        add(with(Box.createHorizontalBox()) {
-            this.add(JLabel("计算基准日"))
-            this.add(Box.createVerticalStrut(100))
-            this.add(JLabel("(必须)"))
-            this.add(JTextField())
-            this.add(JLabel("年"))
-            this.add(JTextField())
-            this.add(JLabel("月"))
-            this.add(JTextField())
-            this.add(JLabel("日"))
+        add(Box.createHorizontalBox().also {
+            val size = Dimension(WIDTH, 30)
+            it.preferredSize = size
+            it.maximumSize = size
 
-            this
+            it.add(JLabel("计算基准日"))
+            it.add(Box.createHorizontalStrut(100))
+            it.add(JLabel("(必须)"))
+            it.add(JTextField())
+            it.add(JLabel("年"))
+            it.add(JTextField())
+            it.add(JLabel("月"))
+            it.add(JTextField())
+            it.add(JLabel("日"))
+
+            it.add(JButton("测试"))
         })
-        add(with(Box.createHorizontalBox()) {
-            this.add(JLabel("计算基准日"))
-            this.add(Box.createVerticalStrut(100))
-            this.add(JLabel("(必须)"))
-            this.add(JTextField())
-            this.add(JLabel("年"))
-            this.add(JTextField())
-            this.add(JLabel("月"))
-            this.add(JTextField())
-            this.add(JLabel("日"))
 
-            this
+        add(Box.createHorizontalBox().also {
+            val size = Dimension(WIDTH, 30)
+            it.preferredSize = size
+            it.maximumSize = size
+
+            it.add(JLabel("计算基准日"))
+            it.add(Box.createHorizontalStrut(100))
+            it.add(JLabel("(必须)"))
+            it.add(JTextField())
+            it.add(JLabel("年"))
+            it.add(JTextField())
+            it.add(JLabel("月"))
+            it.add(JTextField())
+            it.add(JLabel("日"))
+
+            it.add(JButton("测试"))
         })
 
     }

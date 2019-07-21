@@ -2,13 +2,8 @@ package org.yydcnjjw.swing.mxml
 
 import org.reflections.Reflections
 import org.reflections.scanners.MethodAnnotationsScanner
-import org.reflections.scanners.SubTypesScanner
 import java.lang.reflect.Method
-import java.net.JarURLConnection
-import java.util.*
-import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-import kotlin.reflect.jvm.reflect
+import kotlin.reflect.typeOf
 
 class Import(
     import: String
@@ -54,6 +49,7 @@ class Import(
 
 object ClassManager {
     private val classes: MutableMap<Import, Class<*>> = mutableMapOf()
+    private val staticValues: MutableMap<Import, Any> = mutableMapOf()
     private val reflection = Reflections(
         "org.yydcnjjw",
         MethodAnnotationsScanner()
@@ -65,20 +61,54 @@ object ClassManager {
             return null
         }
 
-        val type = try {
-            javaClass
-                .classLoader
-                .loadClass(import.getClassLoadPath())
-        } catch (e: ClassNotFoundException) {
-            return null
+        var classLoadPath = import.getClassLoadPath()
+        var classType: Class<*>?
+        var i: Int
+        while (true) {
+            classType = try {
+                javaClass
+                    .classLoader
+                    .loadClass(classLoadPath)
+            } catch (e: ClassNotFoundException) {
+                null
+            }
+
+            i = classLoadPath.lastIndexOf('$')
+
+            if (i != -1 && classType == null)
+                classLoadPath = classLoadPath.substring(0, i)
+            else
+                break
         }
 
-        classes[import] = type
+        if (classType != null) {
+            val classPath = import.getClassLoadPath()
+            if (classPath.length != classLoadPath.length) {
+                val fields = import.getClassLoadPath()
+                    .substring(classLoadPath.length + 1)
+                    .split('$')
 
-        return type
+                var type: Class<*> = classType
+                var value: Any? = null
+                fields.forEach { name ->
+                    val field = type.getField(name)
+                    value = field.get(type)
+                    type = field.type
+                }
+                if (value != null) {
+                    staticValues[import] = value!!
+                }
+                classType = type
+            }
+            classes[import] = classType
+        }
+
+        return classType
     }
 
     fun getType(import: Import): Class<*>? = classes[import]
+
+    fun getStaticValue(import: Import): Any? = staticValues[import]
 
     fun getMethodsAnnotatedWith(classType: Class<out Annotation>): Set<Method> {
         return reflection.getMethodsAnnotatedWith(classType)

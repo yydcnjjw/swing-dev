@@ -3,7 +3,6 @@ package org.yydcnjjw.swing.mxml
 import org.yydcnjjw.swing.BeanUtil
 import java.awt.Container
 import java.io.InputStream
-import java.lang.ClassCastException
 import java.lang.reflect.Method
 import javax.swing.BoxLayout
 import javax.xml.stream.XMLInputFactory
@@ -11,11 +10,13 @@ import javax.xml.stream.XMLStreamConstants
 import javax.xml.stream.XMLStreamReader
 import kotlin.reflect.KClass
 
-object MXMLLoader {
+// TODO: single object to constructor args
+class MXMLLoader {
+    companion object {
+        private const val IMPORT_PROCESSING_INSTRUCTION = "import"
+        private const val INCLUDE_PROCESSING_INSTRUCTION = "include"
+    }
 
-    private const val IMPORT_PROCESSING_INSTRUCTION = "import"
-
-    // private val xmlSource: Map<String, Any> = mutableMapOf()
     private lateinit var xmlStreamReader: XMLStreamReader
 
     private var current: Element? = null
@@ -38,43 +39,76 @@ object MXMLLoader {
         }
 
         @Suppress("UNCHECKED_CAST")
-        return current?.value as T?
+        return (current?.value ?: current?.build()) as T?
     }
 
     private fun processProcessingInstruction() {
-        val piTarget = xmlStreamReader.piTarget.trim()
-
-        if (piTarget == IMPORT_PROCESSING_INSTRUCTION) {
-            processImport()
+        val piData = xmlStreamReader.piData
+        when (val piTarget = xmlStreamReader.piTarget.trim()) {
+            IMPORT_PROCESSING_INSTRUCTION -> processImport(piData)
+            INCLUDE_PROCESSING_INSTRUCTION -> processInclude(piData)
         }
     }
 
-    private fun processImport() {
-        val import = Import(xmlStreamReader.piData.trim())
+    private fun processImport(piData: String) {
+        val import = Import(piData)
 
         ClassManager.load(import)
 
         imports.add(import)
     }
 
-    private fun getType(name: String): Class<*> =
+    private fun processInclude(piData: String) {
+        val include: Any? = MXMLLoader().load(javaClass.getResourceAsStream(piData))
+
+        if (include != null) {
+            current = InstanceElement(current, include::class.java)
+            current?.value = include
+            current?.appendToParentElement()
+        } else {
+            throw MXMLLoadException("include error build failure")
+        }
+    }
+
+
+    private fun getType(name: String): Class<*>? =
         if (name.isNotEmpty() && name[0].isLowerCase()) {
             // fully-qualified class name
-            ClassManager.load(name)
+            try {
+                ClassManager.load(name)
+            } catch (e: ClassNotFoundException) {
+                null
+            }
         } else {
-            val packageImport = imports.firstOrNull { it.className == name }
-            var type: Class<*>? = if (packageImport != null) {
-                ClassManager.getType(packageImport)
-            } else null
+            var type: Class<*>? =
+                imports.firstOrNull { it.className == name }
+                    .let {
+                        if (it != null) ClassManager.getType(it)
+                        else null
+                    }
 
             if (type == null) {
                 for (import in imports.filter { it.isPackage() }) {
-                    type = ClassManager.load(Import(import.packageName, name))
-                    if (type != null) break
+                    val packageName = Import(import.packageName, name)
+                    type = ClassManager.load(packageName)
+                    if (type != null) {
+                        imports.add(packageName)
+                        break
+                    }
                 }
             }
             type
-        } ?: throw MXMLLoadException("not exist class")
+        }
+
+    private fun getStaticValue(name: String): Any? {
+        getType(name)
+        return imports.firstOrNull { it.className == name }
+            .let {
+                if (it != null) ClassManager.getStaticValue(it)
+                else null
+            }
+
+    }
 
     private fun processStartElement() {
         current = newElement()
@@ -85,7 +119,14 @@ object MXMLLoader {
             val value = xmlStreamReader.getAttributeValue(i)
 
             if (prefix.isEmpty()) {
-                current?.setPropertyAttr(Attr(localName, value))
+                val staticValue = getStaticValue(value)
+
+                if (staticValue != null) {
+                    current?.setPropertyAttr(Attr(localName, staticValue))
+                } else {
+                    current?.setPropertyAttr(Attr(localName, value))
+                }
+
             } else {
                 throw MXMLLoadException("property can not have prefix: $prefix")
             }
@@ -105,11 +146,11 @@ object MXMLLoader {
     private fun newElement(): Element {
         val localName = xmlStreamReader.localName
         val i = localName.lastIndexOf('.')
-        println(localName)
+
         return if (localName[i + 1].isLowerCase()) {
             PropertyElement(localName, current ?: throw MXMLLoadException("property must have a parent"))
         } else {
-            InstanceElement(current, getType(localName))
+            InstanceElement(current, getType(localName) ?: throw ClassNotFoundException(localName))
         }
     }
 }
@@ -140,7 +181,7 @@ class Attr(
 abstract class Element(
     open val parent: Element?
 ) {
-    abstract val value: Any?
+    abstract var value: Any?
     abstract fun setPropertyAttr(attr: Attr, isElem: Boolean = false)
     abstract fun appendToParentElement()
     open fun build(): Any {
@@ -159,7 +200,7 @@ abstract class ClassElement(
         }
     }
 
-    fun getHandler(handlerClassType: Class<out Annotation>) =
+    private fun getHandler(handlerClassType: Class<out Annotation>) =
         ClassManager.getMethodsAnnotatedWith(handlerClassType)
 
     fun getSubElemHandler(classType: Class<*>): Method? {
@@ -260,13 +301,13 @@ class PropertyElement(
         throw MXMLLoadException("Not support Elem class")
     }
 ) {
-    override var value: Any = BeanUtil.invokeGetMethod(
+    override var value: Any? = BeanUtil.invokeGetMethod(
         parent.value ?: parent.build(),
         (parent as ClassElement).classType, name
     ) ?: throw MXMLLoadException("null property")
 
     override fun appendToParentElement() {
-        parent.setPropertyAttr(Attr(name, value), true)
+        parent.setPropertyAttr(Attr(name, value!!), true)
     }
 }
 
@@ -279,9 +320,11 @@ annotation class SubElemHandler(
 
 @SubElemHandler(Container::class, true)
 fun ContainerSubElemHandler(parent: Element, subElem: Element) {
-    BeanUtil.invoke(parent.value ?: parent.build(),
+    BeanUtil.invoke(
+        parent.value ?: parent.build(),
         Container::class.java, "add",
-        listOf(subElem.value ?: subElem.build()))
+        listOf(subElem.value ?: subElem.build())
+    )
 }
 
 @Retention(AnnotationRetention.RUNTIME)
