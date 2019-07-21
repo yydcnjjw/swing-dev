@@ -3,8 +3,10 @@
 <?import java.awt.Dimension?>
 
 <JFrame
+        xmlns:mx="http://cxf.apache.org/bindings/soap"
         size="#(600,400)"
-        undecorated="true">
+        undecorated="true"
+        mx:id="frame">
     <layout>
         <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>
     </layout>

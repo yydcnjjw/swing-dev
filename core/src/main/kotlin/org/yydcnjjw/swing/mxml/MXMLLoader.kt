@@ -15,6 +15,9 @@ class MXMLLoader {
     companion object {
         private const val IMPORT_PROCESSING_INSTRUCTION = "import"
         private const val INCLUDE_PROCESSING_INSTRUCTION = "include"
+
+        private const val PREFIX = "mx"
+        private const val PREFIX_ID = "$PREFIX:id"
     }
 
     private lateinit var xmlStreamReader: XMLStreamReader
@@ -24,6 +27,7 @@ class MXMLLoader {
     private var parseFinished = false
 
     private val imports = mutableListOf<Import>()
+    private val idElems = mutableMapOf<String, Element>()
 
     fun <T> load(inputStream: InputStream): T? {
         xmlStreamReader = XMLInputFactory
@@ -110,6 +114,10 @@ class MXMLLoader {
 
     }
 
+    private fun processPrefix(name: String) {
+
+    }
+
     private fun processStartElement() {
         current = newElement()
 
@@ -128,7 +136,9 @@ class MXMLLoader {
                 }
 
             } else {
-                throw MXMLLoadException("property can not have prefix: $prefix")
+                when("$prefix:$localName") {
+                    PREFIX_ID -> idElems[value] = current!!
+                }
             }
         }
     }
