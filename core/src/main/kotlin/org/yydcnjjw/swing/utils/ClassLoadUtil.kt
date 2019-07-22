@@ -1,4 +1,4 @@
-package org.yydcnjjw.swing.mxml
+package org.yydcnjjw.swing.utils
 
 import org.reflections.Reflections
 import org.reflections.scanners.MethodAnnotationsScanner

@@ -1,4 +1,4 @@
-package org.yydcnjjw.swing.mxml
+package org.yydcnjjw.swing.utils
 
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -21,8 +21,8 @@ class ClassLoadUtilTest {
     fun classLoadTest() {
         assertNotNull(ClassManager.load(Import("javax.swing.JFrame")))
         assertNotNull(ClassManager.load("javax.swing.JLabel"))
-        assertNotNull(ClassManager.load("org.yydcnjjw.swing.mxml.A.b"))
-        assertNotNull(ClassManager.load("org.yydcnjjw.swing.mxml.A.b.b"))
+        assertNotNull(ClassManager.load("org.yydcnjjw.swing.utils.A.b"))
+        assertNotNull(ClassManager.load("org.yydcnjjw.swing.utils.A.b.b"))
         assertNotNull(ClassManager.load("javax.swing.BoxLayout.X_AXIS"))
     }
 }

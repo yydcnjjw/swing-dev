@@ -1,6 +1,5 @@
-package org.yydcnjjw.swing
+package org.yydcnjjw.swing.utils
 
-import org.yydcnjjw.swing.mxml.ClassManager
 import java.lang.reflect.Method
 import java.math.BigDecimal
 import java.math.BigInteger

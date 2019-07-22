@@ -1,7 +1,6 @@
-package org.yydcnjjw.swing.mxml
+package org.yydcnjjw.swing.utils
 
 import org.junit.Test
-import org.yydcnjjw.swing.BeanUtil
 import javax.swing.JLabel
 import kotlin.test.assertEquals
 

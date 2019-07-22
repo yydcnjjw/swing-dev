@@ -1,6 +1,9 @@
 package org.yydcnjjw.swing.mxml
 
-import org.yydcnjjw.swing.BeanUtil
+import org.yydcnjjw.swing.utils.BeanUtil
+import org.yydcnjjw.swing.utils.ClassManager
+import org.yydcnjjw.swing.utils.Import
+
 import java.awt.Container
 import java.io.InputStream
 import java.lang.reflect.Method
