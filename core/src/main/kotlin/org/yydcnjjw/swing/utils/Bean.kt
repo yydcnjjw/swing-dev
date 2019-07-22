@@ -16,11 +16,11 @@ object BeanUtil {
         return (classType.constructors
             .firstOrNull { constructor ->
                 if (constructor.parameterCount == args.size) {
-                    constructor.parameterTypes.forEachIndexed { i, classType ->
+                    for ((i, paramClassType) in constructor.parameterTypes.withIndex()) {
                         try {
-                            argsList.add(coerce(args[i], classType))
-                        } catch (e: IllegalArgumentException) {
-                            println("warn coerce failure ${args[i]} to $classType")
+                            argsList.add(coerce(args[i], paramClassType))
+                        } catch (e: Exception) {
+                            argsList.clear()
                             return@firstOrNull false
                         }
                     }
@@ -106,7 +106,7 @@ object BeanUtil {
     fun coerce(value: Any, classType: Class<*>): Any {
         return if (classType.isAssignableFrom(value::class.java)) value
         else {
-            val stringValue = value.toString().trim()
+            val stringValue = value.toString()
             when (classType) {
                 Boolean::class.java -> stringValue.toBoolean()
                 Char::class.java -> stringValue.toCharArray()[0]
@@ -115,32 +115,53 @@ object BeanUtil {
                 Int::class.java -> stringValue.toInt()
                 Long::class.java -> stringValue.toLong()
                 BigInteger::class.java -> stringValue.toBigInteger()
-                Float::class.java -> stringValue.toFloat()
-                Double::class.java -> stringValue.toDouble()
+                Float::class.java -> {
+                    if (stringValue.contains('.')) stringValue.toFloat()
+                    else throw IllegalArgumentException("Unable to coerce $value to $classType")
+                }
+                Double::class.java -> {
+                    if (stringValue.contains('.')) stringValue.toDouble()
+                    else throw IllegalArgumentException("Unable to coerce $value to $classType")
+                }
                 BigDecimal::class.java -> stringValue.toBigDecimal()
                 else -> {
-                    var valueClassType: Class<*>? = value::class.java
-                    val valueOfMethods = mutableListOf<Method>()
-                    while (valueClassType != null && valueOfMethods.isEmpty()) {
-                        valueOfMethods.clear()
-                        valueOfMethods.addAll(getDeclaredMethod(valueClassType, "valueOf"))
-
-                        if (valueOfMethods.isEmpty()) {
-                            valueClassType = valueClassType.superclass
-                        }
-                    }
-
-                    if (valueOfMethods.isEmpty()) {
+                    if (classType.isEnum()) {
+                        // TODO to enum
+                        throw IllegalArgumentException("Unable to coerce $value to $classType")                     
+                        // Enum.valueOf(classType, stringValue)
+                    } else {
                         throw IllegalArgumentException("Unable to coerce $value to $classType")
                     }
+                    // enumValueOf(name)
+                    // classType
+                    // var valueClassType: Class<*>? = value::class.java
+                    // val valueOfMethods = mutableListOf<Method>()
+                    // while (valueClassType != null && valueOfMethods.isEmpty()) {
+                    //     valueOfMethods.clear()
+                    //     valueOfMethods.addAll(getDeclaredMethod(valueClassType, "valueOf"))
 
-                    try {
-                        (filterMethodWithParam(valueOfMethods, listOf(value))
-                            ?: throw UnsupportedOperationException("$classType have not the method: valueOf"))
-                            .invoke(value, listOf(value))
-                    } catch (e: Exception) {
-                        throw RuntimeException(e)
-                    }
+                    //     if (valueOfMethods.isEmpty()) {
+                    //         valueClassType = valueClassType.superclass
+                    //     }
+                    // }
+                    // valueOfMethods.forEach {
+                    //     println(it)
+                    // }
+                    // println()
+
+                    // if (valueOfMethods.isEmpty()) {
+                    //     throw IllegalArgumentException("Unable to coerce $value to $classType")
+                    // }
+
+                    // try {
+                    //     (filterMethodWithParam(valueOfMethods, listOf(value))
+                    //         ?: throw UnsupportedOperationException("$classType have not the method: valueOf"))
+                    //         .invoke(value, *listOf(value).toTypedArray())
+                    // } catch (e: Exception) {
+                    //     println(classType)
+                    //     println(value)
+                    //     throw RuntimeException(e)
+                    // }
 
                 }
             }

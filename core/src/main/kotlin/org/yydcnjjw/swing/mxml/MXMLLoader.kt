@@ -181,6 +181,7 @@ class Attr(
                 ?.groupValues
                 ?.firstOrNull { it != value } ?: throw MXMLLoadException("no param"))
                 .split(',')
+                .map { it.trim() }
         } else {
             listOf(value)
         }

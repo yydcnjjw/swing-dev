@@ -15,9 +15,6 @@ class Application {
     fun start() {
         loadWindowConfigures()
         val window = getMainWindow() as TestWindow
-
-        println(window.label)
-        println(window.panel)
     }
 
     private fun loadWindowConfigures() {
@@ -25,41 +22,24 @@ class Application {
             ClassManager.getTypesAnnotatedWith(WindowConfigure::class.java).map { classType ->
             classType to classType.getAnnotation(WindowConfigure::class.java)
         })
-        windowConfigures.forEach(::println)
+        // windowConfigures.forEach(::println)
     }
 
     private fun getMainWindow(): BaseWindow {
-        val (windowClassType, windowConfigure) = windowConfigures.toList().firstOrNull {
+        val (windowClassType, _) = windowConfigures.toList().firstOrNull {
             (_, conf) ->
             conf.isMain
         } ?: throw ApplicationException("no main window")
 
-        return newWindowClass(windowClassType, windowConfigure)
+        return newWindowClass(windowClassType)
     }
 
-    private fun newWindowClass(windowClassType: Class<*>, windowConfigure: WindowConfigure) : BaseWindow {
+    private fun newWindowClass(windowClassType: Class<*>) : BaseWindow {
         if (!BaseWindow::class.java.isAssignableFrom(windowClassType)) {
             throw ApplicationException("not window type $windowClassType")
         }
 
-        val instance = BeanUtil.build(windowClassType)
-
-        val loader = MXMLLoader()
-        val windowInstance = loader.load(javaClass
-            .getResourceAsStream(windowConfigure.xmlPath)!!) 
-            ?: throw ApplicationException("mxml load failure")
-
-        windowClassType.getField("innerWindowInstance").set(instance, windowInstance)
-
-        windowClassType.fields.filter {
-            it.isAnnotationPresent(Id::class.java)
-        }.forEach {
-            val id = it.getAnnotation(Id::class.java)
-            it.set(instance, loader.idElems[id.value]?.value 
-                ?: throw ApplicationException("mxml load failure: ${id.value} is not present"))
-        }
-
-        return instance as BaseWindow
+        return BeanUtil.build(windowClassType) as BaseWindow
     }
 
 }
@@ -89,8 +69,26 @@ annotation class Window() {}
 
 @Window
 abstract class BaseWindow {
-    @
-    lateinit var innerWindowInstance: Component
+
+    val innerWindowInstance: Component
+
+    init {
+        val windowConfigure = javaClass.getAnnotation(WindowConfigure::class.java) 
+            ?: throw ApplicationException("please set Window configure")
+
+        val loader = MXMLLoader()
+        innerWindowInstance = (loader.load(javaClass
+            .getResourceAsStream(windowConfigure.xmlPath)!!) 
+            ?: throw ApplicationException("mxml load failure")) as Component
+
+        javaClass.fields.filter {
+            it.isAnnotationPresent(Id::class.java)
+        }.forEach {
+            val id = it.getAnnotation(Id::class.java)
+            it.set(this, loader.idElems[id.value]?.value 
+                ?: throw ApplicationException("mxml load failure: ${id.value} is not present"))
+        }
+    }
 
     fun <T> getWindowInstance() : T {
         @Suppress("UNCHECKED_CAST")
@@ -98,7 +96,7 @@ abstract class BaseWindow {
     }
 
     fun show() {
-        innerWindowInstance.show()    
+        innerWindowInstance.setVisible(true)
     }
 
 }
@@ -115,6 +113,8 @@ class TestWindow: BaseWindow() {
     val s = ""
 
     init {
-
+        println(label)
+        println(panel)
+        println(panel.background)
     }
 }
