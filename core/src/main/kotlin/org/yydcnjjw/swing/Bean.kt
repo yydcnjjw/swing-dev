@@ -21,7 +21,7 @@ object BeanUtil {
                         try {
                             argsList.add(coerce(args[i], classType))
                         } catch (e: IllegalArgumentException) {
-                            println("warn coerce failure")
+                            println("warn coerce failure ${args[i]} to $classType")
                             return@firstOrNull false
                         }
                     }
@@ -107,8 +107,7 @@ object BeanUtil {
     fun coerce(value: Any, classType: Class<*>): Any {
         return if (classType.isAssignableFrom(value::class.java)) value
         else {
-            val stringValue = value.toString()
-
+            val stringValue = value.toString().trim()
             when (classType) {
                 Boolean::class.java -> stringValue.toBoolean()
                 Char::class.java -> stringValue.toCharArray()[0]

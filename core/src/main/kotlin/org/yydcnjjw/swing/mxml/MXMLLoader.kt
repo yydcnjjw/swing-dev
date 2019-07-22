@@ -11,6 +11,7 @@ import javax.xml.stream.XMLStreamReader
 import kotlin.reflect.KClass
 
 // TODO: single object to constructor args
+// TODO: log system
 class MXMLLoader {
     companion object {
         private const val IMPORT_PROCESSING_INSTRUCTION = "import"
@@ -111,11 +112,6 @@ class MXMLLoader {
                 if (it != null) ClassManager.getStaticValue(it)
                 else null
             }
-
-    }
-
-    private fun processPrefix(name: String) {
-
     }
 
     private fun processStartElement() {
@@ -172,7 +168,6 @@ class Attr(
     val name: String,
     value: Any
 ) {
-    // TODO: class new instance
     val values: List<Any> =
         if (value is String && Regex("#\\(.*\\)").matches(value)) {
             // multi params
@@ -242,7 +237,6 @@ open class InstanceElement(
         private const val CONSTRUCTOR = "constructor"
     }
 
-    // TODO support constructor function with params
     // NOTE: sub elem
     // constructor-arg must in front of the property elem
     override var value: Any? = null

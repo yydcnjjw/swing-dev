@@ -1,23 +1,21 @@
 <?import javax.swing.JFrame?>
 <?import javax.swing.*?>
 <?import java.awt.Dimension?>
+<?import java.awt.Color?>
 
 <JFrame
-        xmlns:mx="http://cxf.apache.org/bindings/soap"
-        size="#(600,400)"
+        xmlns:mx="http://org.yydcnjjw.xml"
+        size="#(1024,720)"
         undecorated="true"
         mx:id="frame">
     <layout>
         <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>
     </layout>
-<!--     <layout>
-    </layout>
-    <jMenuBar>
-    </jMenuBar> -->
     <rootPane
             windowDecorationStyle="0"/>
-    <contentPane>
+    <contentPane>    
         <JPanel>
+            <background><Color constructor-arg="#(238, 126, 33)"></Color></background>        
             <JLabel
                     text="Hello World!"
                     size="#(100,100)">

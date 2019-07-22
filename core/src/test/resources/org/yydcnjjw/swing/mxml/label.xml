@@ -1,10 +1,12 @@
 <?import javax.swing.JFrame?>
 <?import javax.swing.*?>
 <?import java.awt.Dimension?>
+<?import java.awt.Color?>
 
 <JPanel>
+    <background><Color constructor-arg="#(100, 100, 100)"></Color></background>  
     <JLabel
-            text="Hello World!"
-            size="#(100,100)">
+            text="Test Hello World!"
+            size="#(300, 200)">
     </JLabel>
 </JPanel>
