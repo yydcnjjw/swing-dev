@@ -2,6 +2,8 @@ package org.yydcnjjw.swing.utils
 
 import org.reflections.Reflections
 import org.reflections.scanners.MethodAnnotationsScanner
+import org.reflections.scanners.TypeAnnotationsScanner
+import org.reflections.scanners.SubTypesScanner
 import java.lang.reflect.Method
 import kotlin.reflect.typeOf
 
@@ -52,7 +54,9 @@ object ClassManager {
     private val staticValues: MutableMap<Import, Any> = mutableMapOf()
     private val reflection = Reflections(
         "org.yydcnjjw",
-        MethodAnnotationsScanner()
+        MethodAnnotationsScanner(),
+        TypeAnnotationsScanner(),
+        SubTypesScanner()
     )
     fun load(name: String): Class<*>? = load(Import(name))
 
@@ -110,7 +114,9 @@ object ClassManager {
 
     fun getStaticValue(import: Import): Any? = staticValues[import]
 
-    fun getMethodsAnnotatedWith(classType: Class<out Annotation>): Set<Method> {
-        return reflection.getMethodsAnnotatedWith(classType)
-    }
+    fun getMethodsAnnotatedWith(classType: Class<out Annotation>): Set<Method> 
+        = reflection.getMethodsAnnotatedWith(classType)
+    
+    fun getTypesAnnotatedWith(classType: Class<out Annotation>): Set<Class<*>>
+        = reflection.getTypesAnnotatedWith(classType)
 }

@@ -10,7 +10,8 @@ class MXMLLoaderTest {
 
     @Test
     fun loadTest() {
-        val frame: JFrame? = MXMLLoader().load(javaClass.getResourceAsStream("test.xml")!!)
+        val frame: JFrame? = MXMLLoader()
+            .load(javaClass.getResourceAsStream("test.xml")!!) as JFrame?
         assertNotNull(frame)
         println(frame.contentPane)
         println(frame.contentPane.background)

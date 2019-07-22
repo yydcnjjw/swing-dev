@@ -1,0 +1,27 @@
+<?import javax.swing.JFrame?>
+<?import javax.swing.*?>
+<?import java.awt.Dimension?>
+<?import java.awt.Color?>
+
+<JFrame
+        xmlns:mx="http://org.yydcnjjw.xml"
+        size="#(1024,720)"
+        undecorated="true"
+        mx:id="frame">
+    <layout>
+        <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>
+    </layout>
+    <rootPane
+            windowDecorationStyle="0"/>
+    <contentPane>    
+        <JPanel mx:id="panel">
+            <background><Color constructor-arg="#(238, 126, 33)"></Color></background>        
+            <JLabel
+                    mx:id="label"
+                    text="Hello World!"
+                    size="#(100,100)">
+            </JLabel>
+            <?include /label.xml?>
+        </JPanel>
+    </contentPane>
+</JFrame>

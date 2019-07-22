@@ -31,9 +31,9 @@ class MXMLLoader {
     private var parseFinished = false
 
     private val imports = mutableListOf<Import>()
-    private val idElems = mutableMapOf<String, Element>()
+    val idElems = mutableMapOf<String, Element>()
 
-    fun <T> load(inputStream: InputStream): T? {
+    fun load(inputStream: InputStream): Any? {
         xmlStreamReader = XMLInputFactory
             .newInstance()
             .createXMLStreamReader(inputStream)
@@ -47,7 +47,7 @@ class MXMLLoader {
         }
 
         @Suppress("UNCHECKED_CAST")
-        return (current?.value ?: current?.build()) as T?
+        return current?.value ?: current?.build()
     }
 
     private fun processProcessingInstruction() {

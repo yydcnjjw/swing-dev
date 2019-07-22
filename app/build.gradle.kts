@@ -5,7 +5,7 @@ plugins {
 }
 
 application {
-    mainClassName = "org.yydcnjjw.application.Main"
+    mainClassName = "org.yydcnjjw.application.MainKt"
 }
 
 dependencies {
