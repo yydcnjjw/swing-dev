@@ -1,0 +1,14 @@
+<?import javax.swing.JFrame?>
+<?import javax.swing.*?>
+<?import java.awt.Dimension?>
+<?import java.awt.Color?>
+
+<JPanel xmlns:mx="http://org.yydcnjjw.xml">
+    <background><Color constructor-arg="#(200, 200, 200)"></Color></background>
+    <mx:slot name="test"/>
+    <JLabel
+            text="Test slot!"
+            size="#(300, 200)">
+    </JLabel>
+
+</JPanel>

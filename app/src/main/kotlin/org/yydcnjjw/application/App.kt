@@ -60,12 +60,16 @@ class App : JFrame() {
             it.background = BTN_COLOR
         })
 
-        add(Box.createHorizontalBox().also {
+        add(JPanel().also {
+            val size = Dimension(WIDTH, 10)
+            it.preferredSize = size
+            it.maximumSize = size
+
             it.add(JLabel("契约情报"))
             it.add(Box.createHorizontalGlue())
         })
 
-        add(Box.createHorizontalBox().also {
+        add(JPanel().also {
             val size = Dimension(WIDTH, 30)
             it.preferredSize = size
             it.maximumSize = size
@@ -83,7 +87,7 @@ class App : JFrame() {
             it.add(JButton("测试"))
         })
 
-        add(Box.createHorizontalBox().also {
+        add(JPanel().also {
             val size = Dimension(WIDTH, 30)
             it.preferredSize = size
             it.maximumSize = size

@@ -15,7 +15,15 @@
             windowDecorationStyle="0"/>
     <contentPane>    
         <JPanel mx:id="panel">
-            <background><Color constructor-arg="#(238, 126, 33)"></Color></background>        
+            <background><Color constructor-arg="#(238, 126, 33)"></Color></background>
+            <mx:include path="/test_slot.xml">
+                <mx:block name="test">
+                    <JLabel
+                            text="block"
+                            size="#(100,100)">
+                    </JLabel>
+                </mx:block>
+            </mx:include>
             <JLabel
                     mx:id="label"
                     text="Hello World!"
