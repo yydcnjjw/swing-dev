@@ -40,6 +40,7 @@ class MXMLLoader {
 
     private val imports = mutableListOf<Import>()
     val idElems = mutableMapOf<String, Element>()
+    val idTemplates = mutableMapOf<String, Any>()
 
     fun load(inputStream: InputStream): Any? {
         xmlStreamReader = XMLInputFactory
@@ -58,14 +59,15 @@ class MXMLLoader {
         return current?.build()
     }
 
-    fun load(inputStream: InputStream, slots: Map<String, List<Element>>): Any? {
+    fun load(inputStream: InputStream, slots: Map<String, List<Element>>, idTemplates: Map<String, Any>): Any? {
         this.slots.putAll(slots)
+        this.idTemplates.putAll(idTemplates)
         return load(inputStream)
     }
 
     private fun processProcessingInstruction() {
         val piData = xmlStreamReader.piData
-        when (val piTarget = xmlStreamReader.piTarget.trim()) {
+        when (xmlStreamReader.piTarget.trim()) {
             IMPORT_PROCESSING_INSTRUCTION -> processImport(piData)
             INCLUDE_PROCESSING_INSTRUCTION -> processInclude(piData)
         }
@@ -144,9 +146,18 @@ class MXMLLoader {
                 if (staticValue != null) {
                     current?.setPropertyAttr(Attr(localName, staticValue))
                 } else {
-                    current?.setPropertyAttr(Attr(localName, value))
+                    val templateValue = getTemplateBlockValue(value)
+                    if (templateValue == null) {
+                        current?.setPropertyAttr(Attr(localName, value))
+                    } else {
+                        current?.setPropertyAttr(
+                            Attr(
+                                localName,
+                                idTemplates[templateValue] ?: throw MXMLLoadException("template params is not passed")
+                            )
+                        )
+                    }
                 }
-
             } else {
                 when ("$prefix:$localName") {
                     PREFIX_ID -> idElems[value] = current!!
@@ -156,7 +167,7 @@ class MXMLLoader {
     }
 
     private fun processEndElement() {
-        current?.parent?.addSubElem(current!!)// .appendToParentElement()
+        current?.parent?.addSubElem(current!!)
         val parent = current?.parent
         if (parent != null) {
             current = parent
@@ -168,11 +179,12 @@ class MXMLLoader {
     private fun newElement(): Element {
         val localName = xmlStreamReader.localName
         val prefix = xmlStreamReader.prefix
+
         return if (prefix == null || prefix.isEmpty()) {
             val i = localName.lastIndexOf('.')
 
             if (localName[i + 1].isLowerCase()) {
-                PropertyElement(localName, current ?: throw MXMLLoadException("property must have a parent"))
+                PropertyElement(current ?: throw MXMLLoadException("property must have a parent"), localName)
             } else {
                 InstanceElement(current, getType(localName) ?: throw ClassNotFoundException(localName))
             }
@@ -189,6 +201,11 @@ class MXMLLoader {
             }
         }
     }
+
+    private fun getTemplateBlockValue(s: String) =
+        Regex("\\$\\{(.*)}").find(s)
+            ?.groupValues?.firstOrNull { it != s }
+
 }
 
 class MXMLLoadException(override val message: String?) :
@@ -306,7 +323,7 @@ class InstanceElement(
                 BeanUtil.invokeSetMethod(value!!, classType, it.name, it.values)
             }
         }
-        return value!!
+        return value ?: throw MXMLLoadException("instance build failure $classType")
     }
 
     override fun setPropertyAttr(attr: Attr, isElem: Boolean) {
@@ -332,25 +349,31 @@ class InstanceElement(
 }
 
 class PropertyElement(
-    val name: String,
-    override val parent: Element
-) : ClassElement(
-    parent,
-    if (parent is ClassElement) {
+    override val parent: Element,
+    val name: String
+) : ValueElement(parent) {
+
+    val classType: Class<*>? = if (parent is ClassElement) {
         BeanUtil.getFieldType(parent.classType, name)
-    } else {
-        throw MXMLLoadException("Not support Elem class")
-    }
-) {
-    override var value: Any? = BeanUtil.invokeGetMethod(
-        parent.build(),
-        (parent as ClassElement).classType, name
-    ) ?: throw MXMLLoadException("null property")
+    } else null
+
+    override var value: Any? = if (classType != null) {
+        BeanUtil.invokeGetMethod(
+            parent.build(),
+            (parent as ClassElement).classType, name
+        ) ?: throw MXMLLoadException("null property")
+    } else null
 
     override fun addSubElem(elem: Element) {
         when (elem) {
             is PropertyElement -> setPropertyAttr(Attr(elem.name, elem.build()), true)
             else -> value = elem.build()
+        }
+    }
+
+    override fun build(): Any {
+        return value ?: getAttrValue("value") ?: {
+            throw MXMLLoadException("prperty element value is null")
         }
     }
 }
@@ -366,20 +389,20 @@ class IncludeElement(
     private val blocks = mutableListOf<BlockElement>()
 
     override fun addSubElem(elem: Element) {
-        if (elem is BlockElement) {
-            blocks.add(elem)
-        } else {
-            throw MXMLLoadException("IncludeElement must only include BlockElement")
+        when (elem) {
+            is BlockElement -> blocks.add(elem)
+            is PropertyElement -> setPropertyAttr(Attr(elem.name, elem.build()))
+            else -> throw MXMLLoadException("IncludeElement must only include BlockElement")
         }
     }
 
     override fun build(): Any =
         MXMLLoader().load(
             javaClass.getResourceAsStream(path),
-            blocks.map { it.name to it.subElems.toList() }.toMap()
-        )
-            ?: throw MXMLLoadException("mxml include build failure include $path")
-
+            blocks.map { it.name to it.subElems.toList() }.toMap(),
+            propertyAttrs.filter { it.name != INCLUDE_TAG_ATTR_PATH }
+                .map { it.name to it.values.first() }.toMap()
+        ) ?: throw MXMLLoadException("mxml include build failure include $path")
 }
 
 class BlockElement(

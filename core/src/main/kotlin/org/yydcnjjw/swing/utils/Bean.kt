@@ -130,7 +130,7 @@ object BeanUtil {
                         throw IllegalArgumentException("Unable to coerce $value to $classType")                     
                         // Enum.valueOf(classType, stringValue)
                     } else {
-                        throw IllegalArgumentException("Unable to coerce $value to $classType")
+                        throw IllegalArgumentException("Unable to coerce $value:${value::class} to $classType")
                     }
                     // enumValueOf(name)
                     // classType

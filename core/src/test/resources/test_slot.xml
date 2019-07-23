@@ -7,7 +7,12 @@
     <background><Color constructor-arg="#(200, 200, 200)"></Color></background>
     <mx:slot name="test"/>
     <JLabel
-            text="Test slot!"
+            text="${label_1}"
+            size="#(300, 200)">
+    </JLabel>
+    <mx:slot name="test2"/>
+    <JLabel
+            text="${label_2}"
             size="#(300, 200)">
     </JLabel>
 

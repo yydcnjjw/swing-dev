@@ -11,11 +11,12 @@ class MXMLLoaderTest {
     @Test
     fun loadTest() {
         val frame: JFrame? = MXMLLoader()
-            .load(javaClass.getResourceAsStream("test.xml")!!) as JFrame?
+            .load(javaClass.getResourceAsStream("/test.xml")!!) as JFrame?
         assertNotNull(frame)
         println(frame.contentPane)
         println(frame.contentPane.background)
         println()
+        
         frame.contentPane.components.forEach {
             println(it)
             println(it.background)
@@ -23,4 +24,11 @@ class MXMLLoaderTest {
         assertEquals(frame.rootPane.windowDecorationStyle, JRootPane.NONE)
     }
 
+    @Test
+    fun checkTemplateBlockTest() {
+        val s = "\${1111}"
+        assertEquals(Regex("\\$\\{(.*)}").find(s)
+            ?.groupValues?.firstOrNull { it != s }, "1111"
+        )
+    }
 }

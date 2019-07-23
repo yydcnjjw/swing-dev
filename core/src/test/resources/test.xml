@@ -14,25 +14,34 @@
     <rootPane
             windowDecorationStyle="0"/>
     <contentPane>    
-        <JPanel>
-            <background>
-                <Color constructor-arg="#(238, 126, 33)"/>
-            </background>
-
-            <mx:include path="test_slot.xml">
+        <JPanel mx:id="panel">
+            <background><Color constructor-arg="#(238, 126, 33)"></Color></background>
+            <mx:include path="/test_slot.xml"
+                        label_1="include label_1">
+                <label_2 value="label 3 include "></label_2>
                 <mx:block name="test">
                     <JLabel
                             text="block"
                             size="#(100,100)">
                     </JLabel>
+                    <JLabel
+                            text="block"
+                            size="#(100,100)">
+                    </JLabel>
+                </mx:block>
+                <mx:block name="test2">
+                    <JLabel
+                            text="block2"
+                            size="#(100,100)">
+                    </JLabel>
                 </mx:block>
             </mx:include>
-
             <JLabel
+                    mx:id="label"
                     text="Hello World!"
                     size="#(100,100)">
             </JLabel>
-            <?include label.xml?>
+            <?include /label.xml?>
         </JPanel>
     </contentPane>
 </JFrame>
