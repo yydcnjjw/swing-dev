@@ -1,0 +1,47 @@
+<?import javax.swing.JFrame?>
+<?import javax.swing.*?>
+<?import java.awt.Dimension?>
+<?import java.awt.Color?>
+
+<JFrame
+        xmlns:mx="http://org.yydcnjjw.xml"
+        size="#(1024,720)"
+        undecorated="true"
+        mx:id="frame">
+    <layout>
+        <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>
+    </layout>
+    <rootPane
+            windowDecorationStyle="0"/>
+    <contentPane>
+        <JPanel mx:id="panel">
+            <background><Color constructor-arg="#(238, 126, 33)"></Color></background>
+            <mx:include path="/test_slot.xml"
+                        label_1="include label_1">
+                <label_2 value="label 3 include "></label_2>
+                <mx:block name="test">
+                    <JLabel
+                            text="block"
+                            size="#(100,100)">
+                    </JLabel>
+                    <JLabel
+                            text="block"
+                            size="#(100,100)">
+                    </JLabel>
+                </mx:block>
+                <mx:block name="test2">
+                    <JLabel
+                            text="f51515"
+                            size="#(100,100)">
+                    </JLabel>
+                </mx:block>
+            </mx:include>
+            <JLabel
+                    mx:id="label"
+                    text="Hello World!"
+                    size="#(100,100)">
+            </JLabel>
+            <?include /label.xml?>
+        </JPanel>
+    </contentPane>
+</JFrame>

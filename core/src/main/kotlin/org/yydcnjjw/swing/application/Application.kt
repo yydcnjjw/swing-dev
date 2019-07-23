@@ -4,8 +4,11 @@ import org.yydcnjjw.swing.mxml.MXMLLoader
 import org.yydcnjjw.swing.utils.BeanUtil
 import org.yydcnjjw.swing.utils.ClassManager
 import java.awt.Component
+import kotlin.reflect.jvm.javaField
 
-class Application {
+class Application(
+    val commandArgs: Array<String>
+) {
     private val windowConfigures = mutableMapOf<Class<*>, WindowConfigure>()
 
     fun start() {
@@ -32,8 +35,9 @@ class Application {
         if (!BaseWindow::class.java.isAssignableFrom(windowClassType)) {
             throw ApplicationException("not window type $windowClassType")
         }
-
-        return BeanUtil.build(windowClassType) as BaseWindow
+        val window = BeanUtil.build(windowClassType) as BaseWindow
+        window.application = this
+        return window
     }
 
 }
@@ -44,7 +48,6 @@ class ApplicationException(override val message: String?) :
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 annotation class WindowConfigure(
-    val xmlPath: String,
     val isMain: Boolean = false
 )
 
@@ -62,39 +65,53 @@ annotation class InnerWindowInstance(val value: String)
 annotation class Window
 
 @Window
-abstract class BaseWindow {
+abstract class BaseWindow(
+    private var xmlPath: String = ""
+) {
+    private var innerWindowInstance: Component? = null
 
-    private val innerWindowInstance: Component
+    internal lateinit var application: Application
 
     init {
-        val windowConfigure = javaClass.getAnnotation(WindowConfigure::class.java)
-            ?: throw ApplicationException("please set Window configure")
+        updateView()
+    }
+
+    fun <T> getWindowInstance(): T? {
+        @Suppress("UNCHECKED_CAST")
+        return innerWindowInstance as T?
+    }
+
+    fun getApplication() = application
+
+    // TODO remove this function
+    fun setView(path: String) {
+        xmlPath = path
+        updateView()
+    }
+
+    private fun updateView() {
+        if (xmlPath.isEmpty()) {
+            return
+        }
 
         val loader = MXMLLoader()
         innerWindowInstance = (loader.load(
             javaClass
-                .getResourceAsStream(windowConfigure.xmlPath)!!
-        )
-            ?: throw ApplicationException("mxml load failure")) as Component
+                .getResourceAsStream(xmlPath)!!
+        ) ?: throw ApplicationException("mxml load failure")) as Component
 
         javaClass.fields.filter {
             it.isAnnotationPresent(Id::class.java)
         }.forEach {
             val id = it.getAnnotation(Id::class.java)
-            it.set(
-                this, loader.idElems[id.value]?.value
-                    ?: throw ApplicationException("mxml load failure: ${id.value} is not present")
+            it.set(this, loader.idElems[id.value]?.value
+                ?: throw ApplicationException("mxml load failure: ${id.value} is not present")
             )
         }
     }
 
-    fun <T> getWindowInstance(): T {
-        @Suppress("UNCHECKED_CAST")
-        return innerWindowInstance as T
-    }
-
-    fun show() {
-        innerWindowInstance.isVisible = true
+    open fun show() {
+        innerWindowInstance?.isVisible = true
     }
 
 }

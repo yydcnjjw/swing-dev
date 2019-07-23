@@ -1,2 +1,3 @@
-include("app", 
-        "core")
+include("core",
+        "tool",
+        "app")

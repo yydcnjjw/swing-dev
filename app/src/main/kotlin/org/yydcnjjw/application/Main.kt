@@ -11,8 +11,8 @@ import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.JPanel
 
-@WindowConfigure("/test.xml", true)
-class TestWindow : BaseWindow() {
+@WindowConfigure(true)
+class TestWindow : BaseWindow("/test.xml") {
 
     @Id("label")
     lateinit var label: JLabel
@@ -20,7 +20,7 @@ class TestWindow : BaseWindow() {
     @Id("panel")
     lateinit var panel: JPanel
 
-    val frame = getWindowInstance<JFrame>()
+    val frame = getWindowInstance<JFrame>()!!
     var mouseAtX = 0
     var mouseAtY = 0
 
@@ -43,7 +43,6 @@ class TestWindow : BaseWindow() {
     }
 }
 
-fun main() {
-    Application().start()
-//    App().start()
+fun main(args: Array<String>) {
+    Application(args).start()
 }
