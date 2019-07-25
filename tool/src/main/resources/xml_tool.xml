@@ -1,51 +1,140 @@
-<?import javax.swing.JFrame?>
 <?import javax.swing.*?>
-<?import java.awt.Dimension?>
-<?import java.awt.Color?>
+<?import java.awt.*?>
 
 <JFrame
         xmlns:mx="http://org.yydcnjjw.xml"
         size="#(1024,720)"
         undecorated="true"
         mx:id="frame">
+    <background>
+        <Color constructor-arg="#(235, 235, 235)"/>
+    </background>
+
     <rootPane
             windowDecorationStyle="JRootPane.NONE"/>
 
-<!--     <layout>
-        <BoxLayout constructor-arg="BoxLayout.Y_AXIS"/>
-    </layout> -->
+    <layout>
+        <BoxLayout constructor-arg="#(${frame.contentPane}, BoxLayout.Y_AXIS)"/>
+    </layout>
 
-    <JLabel text="计算条件设定aa"/>
-    <JLabel text="计算条件设定aa"/>
-    <JLabel text="计算条件设定aa"/>
-    <?include horizontal_glue.xml?>
-    <contentPane>
-        <!--        <JPanel>-->
-        <!--            <layout>-->
-        <!--                <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>-->
-        <!--            </layout>-->
-        <!--            <JLabel text="计算条件设定aa"/>-->
-        <!--            &lt;!&ndash;           &ndash;&gt;-->
-        <!--            <JButton text="X"/>-->
-        <!--        </JPanel>-->
-        <!--        <JPanel>-->
-        <!--            <layout>-->
-        <!--                <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>-->
-        <!--            </layout>-->
-        <!--            <preferredSize><Dimension constructor-arg="#(1024, 10)"/></preferredSize>-->
-        <!--            <maximumSize><Dimension constructor-arg="#(1024, 10)"/></maximumSize>-->
-        <!--            <background>-->
-        <!--                <Color constructor-arg="#(238, 126, 33)"/>-->
-        <!--            </background>-->
-        <!--        </JPanel>-->
-        <!--        <JPanel>-->
-        <!--            <layout>-->
-        <!--                <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>-->
-        <!--            </layout>-->
-        <!--            <preferredSize><Dimension constructor-arg="#(1024, 10)"/></preferredSize>-->
-        <!--            <maximumSize><Dimension constructor-arg="#(1024, 10)"/></maximumSize>-->
-        <!--            <JLabel text="计算条件设定aa"/>-->
-        <!--        </JPanel>-->
-    </contentPane>
-
+    <JPanel mx:id="title_panel">
+        <layout>
+            <BoxLayout constructor-arg="#(${title_panel}, BoxLayout.X_AXIS)"/>
+        </layout>
+        <JLabel text="计算条件设定aa"/>
+        <mx:include path="horizontal_glue.xml"/>
+        <JButton text="X"/>
+    </JPanel>
+    <JPanel>
+        <preferredSize>
+            <Dimension constructor-arg="#(1024, 30)"/>
+        </preferredSize>
+        <maximumSize>
+            <Dimension constructor-arg="#(1024, 30)"/>
+        </maximumSize>
+        <background>
+            <Color constructor-arg="#(238, 126, 33)"/>
+        </background>
+    </JPanel>
+    <JPanel>
+        <preferredSize>
+            <Dimension constructor-arg="#(1024, 30)"/>
+        </preferredSize>
+        <maximumSize>
+            <Dimension constructor-arg="#(1024, 30)"/>
+        </maximumSize>
+        <JLabel text="契约情报"/>
+        <mx:include path="horizontal_glue.xml"/>
+    </JPanel>
+    <JPanel>
+        <preferredSize>
+            <Dimension constructor-arg="#(1024, 30)"/>
+        </preferredSize>
+        <maximumSize>
+            <Dimension constructor-arg="#(1024, 30)"/>
+        </maximumSize>
+        <JLabel text="计算基准日"/>
+        <mx:include path="horizontal_strut.xml"
+                    width="100"/>
+        <JLabel text="(必须)"/>
+        <JTextField>
+            <preferredSize>
+                <Dimension constructor-arg="#(60, 30)"/>
+            </preferredSize>
+        </JTextField>
+        <JLabel text="年"/>
+        <JTextField>
+            <preferredSize>
+                <Dimension constructor-arg="#(60, 30)"/>
+            </preferredSize>
+        </JTextField>
+        <JLabel text="月"/>
+        <JTextField>
+            <preferredSize>
+                <Dimension constructor-arg="#(60, 30)"/>
+            </preferredSize>
+        </JTextField>
+        <JLabel text="日"/>
+        <JButton text="测试"/>
+    </JPanel>
+    <JPanel>
+        <preferredSize>
+            <Dimension constructor-arg="#(1024, 30)"/>
+        </preferredSize>
+        <maximumSize>
+            <Dimension constructor-arg="#(1024, 30)"/>
+        </maximumSize>
+        <JLabel text="计算基准日"/>
+        <mx:include path="horizontal_strut.xml"
+                    width="100"/>
+        <JLabel text="(必须)"/>
+        <JTextField>
+            <preferredSize>
+                <Dimension constructor-arg="#(60, 30)"/>
+            </preferredSize>
+        </JTextField>
+        <JLabel text="年"/>
+        <JTextField>
+            <preferredSize>
+                <Dimension constructor-arg="#(60, 30)"/>
+            </preferredSize>
+        </JTextField>
+        <JLabel text="月"/>
+        <JTextField>
+            <preferredSize>
+                <Dimension constructor-arg="#(60, 30)"/>
+            </preferredSize>
+        </JTextField>
+        <JLabel text="日"/>
+        <JButton text="测试"/>
+        <JCheckBox text="MySql"/>
+    </JPanel>
+    <JPanel>
+        <JList
+                selectionMode="ListSelectionModel.SINGLE_SELECTION"
+                selectedIndex="0"
+                visibleRowCount="3">
+            <constructor-arg>
+                <DefaultListModel>
+                    <String constructor-arg="Java"/>
+                    <String constructor-arg="C++"/>
+                    <String constructor-arg="Go"/>
+                </DefaultListModel>
+            </constructor-arg>
+        </JList>
+    </JPanel>
+    <JPanel>
+        <JComboBox
+                selectionMode="ListSelectionModel.SINGLE_SELECTION"
+                selectedIndex="0"
+                visibleRowCount="3">
+            <constructor-arg>
+                <DefaultComboBoxModel>
+                    <String constructor-arg="Java"/>
+                    <String constructor-arg="C++"/>
+                    <String constructor-arg="Go"/>
+                </DefaultComboBoxModel>
+            </constructor-arg>
+        </JComboBox>
+    </JPanel>
 </JFrame>

@@ -9,14 +9,14 @@ import java.awt.Container
 import java.io.File
 import java.io.InputStream
 import java.lang.reflect.Method
-import javax.swing.BoxLayout
+import javax.swing.DefaultComboBoxModel
+import javax.swing.ListModel
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 import javax.xml.stream.XMLStreamReader
 import kotlin.reflect.KClass
 
 private const val IMPORT_PROCESSING_INSTRUCTION = "import"
-private const val INCLUDE_PROCESSING_INSTRUCTION = "include"
 
 private const val CONSTRUCTOR_ARG_TAG = "constructor-arg"
 
@@ -44,12 +44,12 @@ class MXMLLoader {
 
     private val slots = mutableMapOf<String, List<Element>>()
 
-    private val imports = mutableListOf<Import>(Import("java.lang.*"))
-    
+    private val imports = mutableListOf(Import("java.lang.*"))
 
     private val idTemplates = mutableMapOf<String, Any>()
 
     val idElems = mutableMapOf<String, Element>()
+
     lateinit var parentDir: String
 
     fun load(file: File): Any? {
@@ -84,7 +84,6 @@ class MXMLLoader {
         val piData = xmlStreamReader.piData
         when (xmlStreamReader.piTarget.trim()) {
             IMPORT_PROCESSING_INSTRUCTION -> processImport(piData)
-            INCLUDE_PROCESSING_INSTRUCTION -> processInclude(piData)
         }
     }
 
@@ -95,21 +94,6 @@ class MXMLLoader {
 
         imports.add(import)
     }
-
-    private fun processInclude(piData: String) {
-        val loader = MXMLLoader()
-        val include: Any? = loader.load(piData.getPath(parentDir).toFile())
-        idElems.putAll(loader.idElems)
-
-        if (include != null) {
-            current = InstanceElement(current, include::class.java)
-            current?.value = include
-            current?.parent?.addSubElem(current!!)
-        } else {
-            throw MXMLLoadException("include error build failure")
-        }
-    }
-
 
     private fun getType(name: String): Class<*>? =
         if (name.isNotEmpty() && name[0].isLowerCase()) {
@@ -160,19 +144,11 @@ class MXMLLoader {
             if (prefix.isEmpty()) {
                 val values = splitFunctionParam(value).map {
                     getStaticValue(it.toString()) ?: it
+                }.map {
+                    getTemplateBlockValue(it.toString()) ?: it
                 }
 
-                val templateValue = getTemplateBlockValue(value)
-                if (templateValue == null) {
-                    current?.setPropertyAttr(Attr(localName, values))
-                } else {
-                    current?.setPropertyAttr(
-                        Attr(
-                            localName,
-                            idTemplates[templateValue] ?: throw MXMLLoadException("template params is not passed")
-                        )
-                   )
-                }
+                current?.setPropertyAttr(Attr(localName, values))
             } else {
                 when ("$prefix:$localName") {
                     PREFIX_ID -> idElems[value] = current!!
@@ -200,12 +176,12 @@ class MXMLLoader {
 
             if (localName[i + 1].isLowerCase()) {
                 if (current == null) {
-                    throw MXMLLoadException("property must have a parent")                    
+                    throw MXMLLoadException("property must have a parent")
                 }
                 val classType = if (current is InstanceElement) {
                     try {
                         BeanUtil.getFieldType((current as InstanceElement).classType, localName)
-                    } catch(e: NoSuchElementException) {
+                    } catch (e: NoSuchElementException) {
                         null
                     }
                 } else null
@@ -215,7 +191,7 @@ class MXMLLoader {
                 } else {
                     ClassPropertyElement(current as InstanceElement, localName, classType)
                 }
-                
+
             } else {
                 InstanceElement(current, getType(localName) ?: throw ClassNotFoundException(localName))
             }
@@ -225,7 +201,9 @@ class MXMLLoader {
                     INCLUDE_TAG -> IncludeElement(current, this)
                     SLOT_TAG -> SlotElement(current, slots)
                     BLOCK_TAG -> BlockElement(current ?: throw MXMLLoadException("block must have a parent"))
-                    CONSTRUCTOR_ARG_TAG -> PropertyElement(current ?: throw MXMLLoadException("property must have a parent"), CONSTRUCTOR_ARG_TAG)
+                    CONSTRUCTOR_ARG_TAG -> PropertyElement(
+                        current ?: throw MXMLLoadException("property must have a parent"), CONSTRUCTOR_ARG_TAG
+                    )
                     else -> throw MXMLLoadException("unknown tag $prefix:$localName")
                 }
             } else {
@@ -234,10 +212,28 @@ class MXMLLoader {
         }
     }
 
-    private fun getTemplateBlockValue(s: String) =
-        Regex("\\$\\{(.*)}").find(s)
-            ?.groupValues?.firstOrNull { it != s }
+    private fun getTemplateBlockValue(s: String): Any? {
+        val templateValue = Regex("\\$\\{(.*)}").find(s)
+            ?.groupValues?.firstOrNull { it != s }?.split(".")
 
+        if (templateValue != null && templateValue.size >= 1) {
+            var value: Any? = idElems[templateValue[0]]?.build()
+                ?: idTemplates[templateValue[0]]
+                ?: throw MXMLLoadException("not exist id ${templateValue[0]}")
+
+            val fields = templateValue.filterIndexed { i, _ -> i != 0 }.iterator()
+
+            while (fields.hasNext()) {
+                if (value == null) {
+                    break
+                }
+
+                value = BeanUtil.invokeGetMethod(value, value::class.java, fields.next())
+            }
+            return value ?: throw MXMLLoadException("$s is null")
+        }
+        return null
+    }
 }
 
 class MXMLLoadException(override val message: String?) :
@@ -300,7 +296,6 @@ abstract class ValueElement(
                 ((subElemHandlerAnnotation.extend
                         && subElemHandlerAnnotation.classType.java.isAssignableFrom(classType))
                         || classType == subElemHandlerAnnotation.classType)
-
             }
     }
 }
@@ -357,7 +352,7 @@ class InstanceElement(
             is SlotElement -> elem.slot?.forEach { handler?.invoke(this, this, it) }
             else -> handler?.invoke(this, this, elem)
         }
-    }      
+    }
 
     private fun getConstructorHandler(classType: Class<*>): Method? {
         return getHandler(ConstructorHandler::class.java)
@@ -418,7 +413,7 @@ class ClassPropertyElement(
         }
     }
 
-    override fun build() : Any {
+    override fun build(): Any {
         if (value == null) {
             throw MXMLLoadException("class property must have a sub elem")
         }
@@ -526,23 +521,18 @@ fun ContainerSubElemHandler(parent: Element, subElem: Element) {
     )
 }
 
+@SubElemHandler(ListModel::class, true)
+fun ListModelSubElemHandler(parent: Element, subElem: Element) {
+    val value = parent.build()
+    BeanUtil.invoke(value,
+        value::class.java,
+        "addElement",
+        listOf(subElem.build())
+    )
+}
+
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
 annotation class ConstructorHandler(
     val classType: KClass<*>
 )
-
-@ConstructorHandler(BoxLayout::class)
-fun BoxLayoutConstructorHandler(
-    elem: ValueElement, args: List<Any>
-): Any {
-    return BeanUtil.build(BoxLayout::class.java, mutableListOf<Any>().also {
-        val target = elem.parent?.parent?.value!!
-        if (target is Container) {
-            it.add(target)
-            it.addAll(args)
-        } else {
-            throw MXMLLoadException("box layout target must is a container, please set parent elem")
-        }
-    })
-}

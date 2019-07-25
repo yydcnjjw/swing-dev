@@ -1,0 +1,8 @@
+<?import javax.swing.Box.Filler?>
+<?import java.awt.Dimension?>
+
+<Box.Filler>
+    <constructor-arg><Dimension constructor-arg="#(${width},0)"/></constructor-arg>
+    <constructor-arg><Dimension constructor-arg="#(${width},0)"/></constructor-arg>
+    <constructor-arg><Dimension constructor-arg="#(${width},Short.MAX_VALUE)"/></constructor-arg>
+</Box.Filler>
