@@ -3,13 +3,37 @@ package org.yydcnjjw.swing.application
 import org.yydcnjjw.swing.mxml.MXMLLoader
 import org.yydcnjjw.swing.utils.BeanUtil
 import org.yydcnjjw.swing.utils.ClassManager
+import org.yydcnjjw.swing.utils.getPath
 import java.awt.Component
-import kotlin.reflect.jvm.javaField
+import java.io.File
+import java.nio.file.Path
+import java.nio.file.Paths
+
 
 class Application(
-    val commandArgs: Array<String>
+    val commandArgs: Array<String>,
+    rootDir: String, // xml root dir
+    var mainClassWindow: Class<out BaseWindow>? = null
 ) {
-    private val windowConfigures = mutableMapOf<Class<*>, WindowConfigure>()
+    private val windowConfigures = mutableMapOf<Class<out BaseWindow>, WindowConfigure>()
+
+    val xmlRootDir = Paths.get(rootDir).also {
+        if (!it.toFile().isDirectory) throw ApplicationException("xml root path must be a dir")
+    }
+
+    init {
+        loadWindowConfigures()
+        if (mainClassWindow == null) {
+            val window = (windowConfigures.toList().firstOrNull { (_, conf) ->
+                conf.isMain
+            } ?: throw ApplicationException("no main window")).first
+
+            if (!BaseWindow::class.java.isAssignableFrom(window)) {
+                throw ApplicationException("not window type $window")
+            }
+            mainClassWindow = window
+        }
+    }
 
     fun start() {
         loadWindowConfigures()
@@ -19,22 +43,20 @@ class Application(
     private fun loadWindowConfigures() {
         windowConfigures.putAll(
             ClassManager.getTypesAnnotatedWith(WindowConfigure::class.java).map { classType ->
-                classType to classType.getAnnotation(WindowConfigure::class.java)
+                if (BaseWindow::class.java.isAssignableFrom(classType)) {
+                    @Suppress("UNCHECKED_CAST")
+                    classType as Class<out BaseWindow> to classType.getAnnotation(WindowConfigure::class.java)
+                } else {
+                    throw ApplicationException("WindowConfigure annotation must set at class that is extend BaseWindow")
+                }
             })
     }
 
     private fun getMainWindow(): BaseWindow {
-        val (windowClassType, _) = windowConfigures.toList().firstOrNull { (_, conf) ->
-            conf.isMain
-        } ?: throw ApplicationException("no main window")
-
-        return newWindowClass(windowClassType)
+        return newWindowClass(mainClassWindow!!)
     }
 
-    private fun newWindowClass(windowClassType: Class<*>): BaseWindow {
-        if (!BaseWindow::class.java.isAssignableFrom(windowClassType)) {
-            throw ApplicationException("not window type $windowClassType")
-        }
+    private fun newWindowClass(windowClassType: Class<out BaseWindow>): BaseWindow {
         val window = BeanUtil.build(windowClassType) as BaseWindow
         window.application = this
         return window
@@ -65,16 +87,12 @@ annotation class InnerWindowInstance(val value: String)
 annotation class Window
 
 @Window
-abstract class BaseWindow(
-    private var xmlPath: String = ""
-) {
+abstract class BaseWindow {
+
     private var innerWindowInstance: Component? = null
+    private var xmlPath: Path? = null
 
     internal lateinit var application: Application
-
-    init {
-        updateView()
-    }
 
     fun <T> getWindowInstance(): T? {
         @Suppress("UNCHECKED_CAST")
@@ -83,29 +101,26 @@ abstract class BaseWindow(
 
     fun getApplication() = application
 
-    // TODO remove this function
     fun setView(path: String) {
-        xmlPath = path
+        xmlPath = path.getPath(application.xmlRootDir.toString())
         updateView()
     }
 
-    private fun updateView() {
-        if (xmlPath.isEmpty()) {
+    fun updateView() {
+        if (xmlPath == null) {
             return
         }
 
         val loader = MXMLLoader()
-        innerWindowInstance = (loader.load(
-            javaClass
-                .getResourceAsStream(xmlPath)!!
-        ) ?: throw ApplicationException("mxml load failure")) as Component
+        innerWindowInstance = (loader.load(xmlPath?.toFile()!!) ?: throw ApplicationException("mxml load failure")) as Component
 
         javaClass.fields.filter {
             it.isAnnotationPresent(Id::class.java)
         }.forEach {
             val id = it.getAnnotation(Id::class.java)
-            it.set(this, loader.idElems[id.value]?.value
-                ?: throw ApplicationException("mxml load failure: ${id.value} is not present")
+            it.set(
+                this, loader.idElems[id.value]?.value
+                    ?: throw ApplicationException("mxml load failure: ${id.value} is not present")
             )
         }
     }

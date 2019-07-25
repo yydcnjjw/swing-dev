@@ -8,15 +8,12 @@
         size="#(1024,720)"
         undecorated="true"
         mx:id="frame">
-    <layout>
-        <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>
-    </layout>
     <rootPane
             windowDecorationStyle="0"/>
     <contentPane>    
         <JPanel mx:id="panel">
             <background><Color constructor-arg="#(238, 126, 33)"></Color></background>
-            <mx:include path="/test_slot.xml"
+            <mx:include path="test_slot.xml"
                         label_1="include label_1">
                 <label_2 value="label 3 include "></label_2>
                 <mx:block name="test">
@@ -41,7 +38,7 @@
                     text="Hello World!"
                     size="#(100,100)">
             </JLabel>
-            <?include /label.xml?>
+            <?include ./label.xml?>
         </JPanel>
     </contentPane>
 </JFrame>

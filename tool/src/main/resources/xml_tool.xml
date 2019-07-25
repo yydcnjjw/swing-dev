@@ -8,40 +8,44 @@
         size="#(1024,720)"
         undecorated="true"
         mx:id="frame">
-    <layout>
-        <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>
-    </layout>
     <rootPane
-            windowDecorationStyle="0"/>
+            windowDecorationStyle="JRootPane.NONE"/>
+
+<!--     <layout>
+        <BoxLayout constructor-arg="BoxLayout.Y_AXIS"/>
+    </layout> -->
+
+    <JLabel text="计算条件设定aa"/>
+    <JLabel text="计算条件设定aa"/>
+    <JLabel text="计算条件设定aa"/>
+    <?include horizontal_glue.xml?>
     <contentPane>
-        <JPanel mx:id="panel">
-            <background><Color constructor-arg="#(238, 126, 33)"></Color></background>
-            <mx:include path="/test_slot.xml"
-                        label_1="include label_1">
-                <label_2 value="label 3 include "></label_2>
-                <mx:block name="test">
-                    <JLabel
-                            text="block"
-                            size="#(100,100)">
-                    </JLabel>
-                    <JLabel
-                            text="block"
-                            size="#(100,100)">
-                    </JLabel>
-                </mx:block>
-                <mx:block name="test2">
-                    <JLabel
-                            text="f51515"
-                            size="#(100,100)">
-                    </JLabel>
-                </mx:block>
-            </mx:include>
-            <JLabel
-                    mx:id="label"
-                    text="Hello World!"
-                    size="#(100,100)">
-            </JLabel>
-            <?include /label.xml?>
-        </JPanel>
+        <!--        <JPanel>-->
+        <!--            <layout>-->
+        <!--                <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>-->
+        <!--            </layout>-->
+        <!--            <JLabel text="计算条件设定aa"/>-->
+        <!--            &lt;!&ndash;           &ndash;&gt;-->
+        <!--            <JButton text="X"/>-->
+        <!--        </JPanel>-->
+        <!--        <JPanel>-->
+        <!--            <layout>-->
+        <!--                <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>-->
+        <!--            </layout>-->
+        <!--            <preferredSize><Dimension constructor-arg="#(1024, 10)"/></preferredSize>-->
+        <!--            <maximumSize><Dimension constructor-arg="#(1024, 10)"/></maximumSize>-->
+        <!--            <background>-->
+        <!--                <Color constructor-arg="#(238, 126, 33)"/>-->
+        <!--            </background>-->
+        <!--        </JPanel>-->
+        <!--        <JPanel>-->
+        <!--            <layout>-->
+        <!--                <BoxLayout constructor-arg="BoxLayout.X_AXIS"/>-->
+        <!--            </layout>-->
+        <!--            <preferredSize><Dimension constructor-arg="#(1024, 10)"/></preferredSize>-->
+        <!--            <maximumSize><Dimension constructor-arg="#(1024, 10)"/></maximumSize>-->
+        <!--            <JLabel text="计算条件设定aa"/>-->
+        <!--        </JPanel>-->
     </contentPane>
+
 </JFrame>

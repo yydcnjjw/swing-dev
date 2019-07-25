@@ -44,66 +44,69 @@ class App : JFrame() {
         })
 
         background = BACKGROUND_COLOR
-
         layout = BoxLayout(contentPane, BoxLayout.Y_AXIS)
-        val titlePanel = JPanel()
-        titlePanel.layout = BoxLayout(titlePanel, BoxLayout.X_AXIS)
-        titlePanel.add(JLabel("计算条件设定"))
-        titlePanel.add(Box.createHorizontalGlue())
-        titlePanel.add(JButton("X"))
-        add(titlePanel)
+        add(JLabel("aaa"))
+        add(JLabel("bbb"))
+        add(JLabel("ccc"))
 
-        add(JPanel().also {
-            val size = Dimension(WIDTH, 10)
-            it.preferredSize = size
-            it.maximumSize = size
-            it.background = BTN_COLOR
-        })
-
-        add(JPanel().also {
-            val size = Dimension(WIDTH, 10)
-            it.preferredSize = size
-            it.maximumSize = size
-
-            it.add(JLabel("契约情报"))
-            it.add(Box.createHorizontalGlue())
-        })
-
-        add(JPanel().also {
-            val size = Dimension(WIDTH, 30)
-            it.preferredSize = size
-            it.maximumSize = size
-
-            it.add(JLabel("计算基准日"))
-            it.add(Box.createHorizontalStrut(100))
-            it.add(JLabel("(必须)"))
-            it.add(JTextField())
-            it.add(JLabel("年"))
-            it.add(JTextField())
-            it.add(JLabel("月"))
-            it.add(JTextField())
-            it.add(JLabel("日"))
-
-            it.add(JButton("测试"))
-        })
-
-        add(JPanel().also {
-            val size = Dimension(WIDTH, 30)
-            it.preferredSize = size
-            it.maximumSize = size
-
-            it.add(JLabel("计算基准日"))
-            it.add(Box.createHorizontalStrut(100))
-            it.add(JLabel("(必须)"))
-            it.add(JTextField())
-            it.add(JLabel("年"))
-            it.add(JTextField())
-            it.add(JLabel("月"))
-            it.add(JTextField())
-            it.add(JLabel("日"))
-
-            it.add(JButton("测试"))
-        })
+//        val titlePanel = JPanel()
+//        titlePanel.layout = BoxLayout(titlePanel, BoxLayout.X_AXIS)
+//        titlePanel.add(JLabel("计算条件设定"))
+//        titlePanel.add(Box.createHorizontalGlue())
+//        titlePanel.add(JButton("X"))
+//        add(titlePanel)
+//
+//        add(JPanel().also {
+//            val size = Dimension(WIDTH, 10)
+//            it.preferredSize = size
+//            it.maximumSize = size
+//            it.background = BTN_COLOR
+//        })
+//
+//        add(JPanel().also {
+//            val size = Dimension(WIDTH, 10)
+//            it.preferredSize = size
+//            it.maximumSize = size
+//
+//            it.add(JLabel("契约情报"))
+//            it.add(Box.createHorizontalGlue())
+//        })
+//
+//        add(JPanel().also {
+//            val size = Dimension(WIDTH, 30)
+//            it.preferredSize = size
+//            it.maximumSize = size
+//
+//            it.add(JLabel("计算基准日"))
+//            it.add(Box.createHorizontalStrut(100))
+//            it.add(JLabel("(必须)"))
+//            it.add(JTextField())
+//            it.add(JLabel("年"))
+//            it.add(JTextField())
+//            it.add(JLabel("月"))
+//            it.add(JTextField())
+//            it.add(JLabel("日"))
+//
+//            it.add(JButton("测试"))
+//        })
+//
+//        add(JPanel().also {
+//            val size = Dimension(WIDTH, 30)
+//            it.preferredSize = size
+//            it.maximumSize = size
+//
+//            it.add(JLabel("计算基准日"))
+//            it.add(Box.createHorizontalStrut(100))
+//            it.add(JLabel("(必须)"))
+//            it.add(JTextField())
+//            it.add(JLabel("年"))
+//            it.add(JTextField())
+//            it.add(JLabel("月"))
+//            it.add(JTextField())
+//            it.add(JLabel("日"))
+//
+//            it.add(JButton("测试"))
+//        })
 
     }
 

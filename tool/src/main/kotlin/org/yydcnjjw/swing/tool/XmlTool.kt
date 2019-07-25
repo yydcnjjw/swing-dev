@@ -33,12 +33,7 @@ class XMLToolWindow : BaseWindow() {
     }
 
     private fun fileWatch() = GlobalScope.launch(Dispatchers.IO) {
-        val file = File(javaClass.getResource(commandParse().path).path)
-        val path = file
-            .parentFile
-            .toPath()
-        println(file)
-        println(path)
+        val path = getApplication().xmlRootDir
 
         val watcher = FileSystems.getDefault().newWatchService()
         path.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY)
@@ -59,18 +54,27 @@ class XMLToolWindow : BaseWindow() {
     }
 
     fun init() {
+        setView(commandParse().path)
+
         fileWatch()
+
+        initFrame()
     }
 
-    fun resetView() {
+    private fun resetView() {
         try {
-            setView(commandParse().path)
+            updateView()
         } catch (e: Exception) {
             e.printStackTrace()
             return
         }
 
         frame?.dispose()
+
+        initFrame()
+    }
+
+    fun initFrame() {
         frame = getWindowInstance()
 
         frame?.addMouseListener(object : MouseAdapter() {
@@ -91,7 +95,6 @@ class XMLToolWindow : BaseWindow() {
 
     override fun show() {
         init()
-        resetView()
     }
 }
 
@@ -102,5 +105,8 @@ class ToolCommand : CliktCommand() {
 
 
 fun main(args: Array<String>) {
-    Application(arrayOf("/xml_tool.xml")).start()
+    Application(
+        arrayOf("xml_tool.xml"),
+        "/home/yydcnjjw/workspace/code/project/hyron/swing-dev/tool/src/main/resources"
+    ).start()
 }

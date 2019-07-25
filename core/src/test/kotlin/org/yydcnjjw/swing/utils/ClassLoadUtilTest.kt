@@ -24,5 +24,6 @@ class ClassLoadUtilTest {
         assertNotNull(ClassManager.load("org.yydcnjjw.swing.utils.A.b"))
         assertNotNull(ClassManager.load("org.yydcnjjw.swing.utils.A.b.b"))
         assertNotNull(ClassManager.load("javax.swing.BoxLayout.X_AXIS"))
+        assertNotNull(ClassManager.load("javax.swing.Box.Filler"))
     }
 }

@@ -1,5 +1,6 @@
 package org.yydcnjjw.swing.mxml
 
+import java.io.File
 import javax.swing.JFrame
 import javax.swing.JRootPane
 import kotlin.test.Test
@@ -11,7 +12,7 @@ class MXMLLoaderTest {
     @Test
     fun loadTest() {
         val frame: JFrame? = MXMLLoader()
-            .load(javaClass.getResourceAsStream("/test.xml")!!) as JFrame?
+            .load(File("/home/yydcnjjw/workspace/code/project/hyron/swing-dev/core/src/test/resources/test.xml")) as JFrame?
         assertNotNull(frame)
         println(frame.contentPane)
         println(frame.contentPane.background)
