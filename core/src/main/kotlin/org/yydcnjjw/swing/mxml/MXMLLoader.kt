@@ -18,10 +18,14 @@ import kotlin.reflect.KClass
 private const val IMPORT_PROCESSING_INSTRUCTION = "import"
 private const val INCLUDE_PROCESSING_INSTRUCTION = "include"
 
+private const val CONSTRUCTOR_ARG_TAG = "constructor-arg"
+
 private const val INCLUDE_TAG = "include"
 private const val INCLUDE_TAG_ATTR_PATH = "path"
+
 private const val SLOT_TAG = "slot"
 private const val SLOT_TAG_ATTR_NAME = "name"
+
 private const val BLOCK_TAG = "block"
 private const val BLOCK_TAG_ATTR_NAME = "name"
 
@@ -40,7 +44,8 @@ class MXMLLoader {
 
     private val slots = mutableMapOf<String, List<Element>>()
 
-    private val imports = mutableListOf<Import>()
+    private val imports = mutableListOf<Import>(Import("java.lang.*"))
+    
 
     private val idTemplates = mutableMapOf<String, Any>()
 
@@ -153,22 +158,20 @@ class MXMLLoader {
             val value = xmlStreamReader.getAttributeValue(i)
 
             if (prefix.isEmpty()) {
-                val staticValue = getStaticValue(value)
+                val values = splitFunctionParam(value).map {
+                    getStaticValue(it.toString()) ?: it
+                }
 
-                if (staticValue != null) {
-                    current?.setPropertyAttr(Attr(localName, staticValue))
+                val templateValue = getTemplateBlockValue(value)
+                if (templateValue == null) {
+                    current?.setPropertyAttr(Attr(localName, values))
                 } else {
-                    val templateValue = getTemplateBlockValue(value)
-                    if (templateValue == null) {
-                        current?.setPropertyAttr(Attr(localName, value))
-                    } else {
-                        current?.setPropertyAttr(
-                            Attr(
-                                localName,
-                                idTemplates[templateValue] ?: throw MXMLLoadException("template params is not passed")
-                            )
+                    current?.setPropertyAttr(
+                        Attr(
+                            localName,
+                            idTemplates[templateValue] ?: throw MXMLLoadException("template params is not passed")
                         )
-                    }
+                   )
                 }
             } else {
                 when ("$prefix:$localName") {
@@ -196,7 +199,23 @@ class MXMLLoader {
             val i = localName.lastIndexOf('.')
 
             if (localName[i + 1].isLowerCase()) {
-                PropertyElement(current ?: throw MXMLLoadException("property must have a parent"), localName)
+                if (current == null) {
+                    throw MXMLLoadException("property must have a parent")                    
+                }
+                val classType = if (current is InstanceElement) {
+                    try {
+                        BeanUtil.getFieldType((current as InstanceElement).classType, localName)
+                    } catch(e: NoSuchElementException) {
+                        null
+                    }
+                } else null
+
+                if (classType == null) {
+                    PropertyElement(current!!, localName)
+                } else {
+                    ClassPropertyElement(current as InstanceElement, localName, classType)
+                }
+                
             } else {
                 InstanceElement(current, getType(localName) ?: throw ClassNotFoundException(localName))
             }
@@ -206,6 +225,7 @@ class MXMLLoader {
                     INCLUDE_TAG -> IncludeElement(current, this)
                     SLOT_TAG -> SlotElement(current, slots)
                     BLOCK_TAG -> BlockElement(current ?: throw MXMLLoadException("block must have a parent"))
+                    CONSTRUCTOR_ARG_TAG -> PropertyElement(current ?: throw MXMLLoadException("property must have a parent"), CONSTRUCTOR_ARG_TAG)
                     else -> throw MXMLLoadException("unknown tag $prefix:$localName")
                 }
             } else {
@@ -223,24 +243,25 @@ class MXMLLoader {
 class MXMLLoadException(override val message: String?) :
     Exception()
 
-class Attr(
+fun splitFunctionParam(value: Any): List<Any> = if (value is String && Regex("#\\(.*\\)").matches(value)) {
+    // multi params
+    // format #(p1,p2,p3,...)
+    // param support number, string
+    (Regex("#\\((.*)\\)")
+        .find(value)
+        ?.groupValues
+        ?.firstOrNull { it != value } ?: throw MXMLLoadException("no param"))
+        .split(',')
+        .map { it.trim() }
+} else {
+    listOf(value)
+}
+
+data class Attr(
     val name: String,
-    value: Any
+    val values: List<Any>
 ) {
-    val values: List<Any> =
-        if (value is String && Regex("#\\(.*\\)").matches(value)) {
-            // multi params
-            // format #(p1,p2,p3,...)
-            // param support number, string
-            (Regex("#\\((.*)\\)")
-                .find(value)
-                ?.groupValues
-                ?.firstOrNull { it != value } ?: throw MXMLLoadException("no param"))
-                .split(',')
-                .map { it.trim() }
-        } else {
-            listOf(value)
-        }
+    constructor(name: String, value: Any) : this(name, splitFunctionParam(value)) {}
 }
 
 abstract class Element(
@@ -253,9 +274,7 @@ abstract class Element(
     }
 
     abstract fun addSubElem(elem: Element)
-    open fun build(): Any {
-        return value!!
-    }
+    abstract fun build(): Any
 
     protected fun getAttrValue(name: String): String? =
         propertyAttrs
@@ -267,7 +286,9 @@ abstract class ValueElement(
     parent: Element?
 ) : Element(parent) {
 
-    open val classType: Class<*>? = null
+    override var value: Any? = null
+
+    override fun build(): Any = value!!
 
     protected fun getHandler(handlerClassType: Class<out Annotation>) =
         ClassManager.getMethodsAnnotatedWith(handlerClassType)
@@ -282,36 +303,15 @@ abstract class ValueElement(
 
             }
     }
-
-    override fun setPropertyAttr(attr: Attr, isElem: Boolean) {
-        if (classType != null) {
-            if (BeanUtil.getSetterMethod(classType!!, attr.name).isNotEmpty()) {
-                BeanUtil.invokeSetMethod(this.value!!, classType!!, attr.name, attr.values)
-            }
-        } else {
-            super.setPropertyAttr(attr, isElem)
-        }
-
-    }
-
-    override fun addSubElem(elem: Element) {
-        val handler = if (classType != null) getSubElemHandler(classType!!) else null
-        when (elem) {
-            is PropertyElement -> setPropertyAttr(Attr(elem.name, elem.build()), true)
-            is SlotElement -> elem.slot?.forEach { handler?.invoke(this, this, it) }
-            else -> handler?.invoke(this, this, elem)
-        }
-    }
 }
 
 class InstanceElement(
     parent: Element?,
-    override val classType: Class<*>
+    val classType: Class<*>
 ) : ValueElement(parent) {
 
     companion object {
         private const val CONSTRUCTOR_ARG = "constructor-arg"
-        private const val CONSTRUCTOR = "constructor"
     }
 
     // NOTE: sub elem
@@ -350,6 +350,15 @@ class InstanceElement(
         }
     }
 
+    override fun addSubElem(elem: Element) {
+        val handler = getSubElemHandler(classType)
+        when (elem) {
+            is PropertyElement -> setPropertyAttr(Attr(elem.name, elem.build()), true)
+            is SlotElement -> elem.slot?.forEach { handler?.invoke(this, this, it) }
+            else -> handler?.invoke(this, this, elem)
+        }
+    }      
+
     private fun getConstructorHandler(classType: Class<*>): Method? {
         return getHandler(ConstructorHandler::class.java)
             .firstOrNull { method ->
@@ -359,26 +368,44 @@ class InstanceElement(
 
 }
 
-class PropertyElement(
+open class PropertyElement(
     override val parent: Element,
     val name: String
 ) : ValueElement(parent) {
 
-    override val classType: Class<*>? = if (parent is ValueElement && parent.classType != null) {
-        BeanUtil.getFieldType(parent.classType!!, name)
-    } else null
+    override fun addSubElem(elem: Element) {
+        value = elem.build()
+    }
 
-    override var value: Any? = if (classType != null) {
-        BeanUtil.invokeGetMethod(
-            parent.build(),
-            (parent as ValueElement).classType!!, name
-        ) ?: throw MXMLLoadException("null property")
-    } else null
+    override fun build(): Any {
+        return value ?: getAttrValue("value") ?: {
+            throw MXMLLoadException("prperty element value is null")
+        }
+    }
+}
+
+class ClassPropertyElement(
+    parent: InstanceElement,
+    name: String,
+    val classType: Class<*>
+) : PropertyElement(parent, name) {
+    override var value: Any? = BeanUtil.invokeGetMethod(
+        parent.build(),
+        parent.classType, name
+    )
+
+    override fun setPropertyAttr(attr: Attr, isElem: Boolean) {
+        if (value != null) {
+            if (BeanUtil.getSetterMethod(classType, attr.name).isNotEmpty()) {
+                BeanUtil.invokeSetMethod(value!!, classType, attr.name, attr.values)
+            }
+        } else {
+            super.setPropertyAttr(attr, isElem)
+        }
+    }
 
     override fun addSubElem(elem: Element) {
-        val handler = if (classType != null) {
-            getSubElemHandler(classType)
-        } else null
+        val handler = getSubElemHandler(classType)
 
         when (elem) {
             is PropertyElement -> setPropertyAttr(Attr(elem.name, elem.build()), true)
@@ -391,10 +418,15 @@ class PropertyElement(
         }
     }
 
-    override fun build(): Any {
-        return value ?: getAttrValue("value") ?: {
-            throw MXMLLoadException("prperty element value is null")
+    override fun build() : Any {
+        if (value == null) {
+            throw MXMLLoadException("class property must have a sub elem")
         }
+        propertyAttrs.forEach { attr ->
+            setPropertyAttr(attr, true)
+        }
+        propertyAttrs.clear()
+        return value!!
     }
 }
 

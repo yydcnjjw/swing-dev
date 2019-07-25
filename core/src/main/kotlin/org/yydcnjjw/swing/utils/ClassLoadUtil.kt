@@ -106,6 +106,7 @@ object ClassManager {
             }
             classes[import] = classType
         }
+
         return classType
     }
 

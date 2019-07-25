@@ -27,7 +27,12 @@ object BeanUtil {
                     return@firstOrNull true
                 }
                 return@firstOrNull false
-            } ?: throw ClassNotFoundException("constructors is not exist"))
+            } ?: throw ClassNotFoundException
+            ("constructors is not exist $classType\n ${buildString {
+                args.forEach {
+                    append("${it::class} $it ")
+                }
+            }}"))
             .newInstance(*argsList.toTypedArray()) ?: throw ClassNotFoundException("class build failure")
     }
 

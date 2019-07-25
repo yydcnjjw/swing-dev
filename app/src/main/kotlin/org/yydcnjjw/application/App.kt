@@ -48,7 +48,6 @@ class App : JFrame() {
         add(JLabel("aaa"))
         add(JLabel("bbb"))
         add(JLabel("ccc"))
-
 //        val titlePanel = JPanel()
 //        titlePanel.layout = BoxLayout(titlePanel, BoxLayout.X_AXIS)
 //        titlePanel.add(JLabel("计算条件设定"))
